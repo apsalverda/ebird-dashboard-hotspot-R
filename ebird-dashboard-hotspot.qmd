@@ -37,77 +37,79 @@ library(bslib)
 library(bsicons)
 library(leaflet)
 
-# read ebird data
-ebird_csv = read_csv(
-  "MyEBirdData.csv",
-  col_types = cols(
-    `Submission ID` = col_character(),
-    `Common Name` = col_character(),
-    `Scientific Name` = col_character(),
-    `Taxonomic Order` = col_double(),
-    Count = col_character(), #!
-    `State/Province` = col_character(),
-    County = col_character(),
-    `Location ID` = col_character(),
-    Location = col_character(),
-    Latitude = col_double(),
-    Longitude = col_double(),
-    Date = col_date(format = ""),
-    Time = col_time(format = ""),
-    Protocol = col_character(),
-    `Duration (Min)` = col_double(),
-    `All Obs Reported` = col_double(),
-    `Distance Traveled (km)` = col_double(),
-    `Area Covered (ha)` = col_logical(),
-    `Number of Observers` = col_double(),
-    `Breeding Code` = col_character(),
-    `Observation Details` = col_character(),
-    `Checklist Comments` = col_character(),
-    `ML Catalog Numbers` = col_character()
-  ),
-  na = c("")
-)
-# NOTE: parsing issues can be ignored; are due to empty values not being
-#       included in the data when they occur on the "right end":
-#       problems(ebird_csv) %>%
-#       count(expected, actual)
-
-# reorganize and reformat data
-dat =
-  ebird_csv %>%
-  janitor::clean_names() %>%
-  select(submission_id, date, everything()) %>%
-  arrange(date, time) %>%
-  mutate(
-    year = factor(year(date)),
-    month = month(date),
-    day_of_year = yday(date),
-    us_season = case_when(
-      month < 3 | month == 12~ "winter",
-      month < 6 ~ "spring",
-      month < 9 ~ "summer",
-      month < 12 ~ "fall",
-      TRUE ~ NA
-    ),
-    us_season = factor(us_season, levels = c("spring", "summer", "fall", "winter")),
-    month = factor(month(date, label = TRUE)),
-    # convert "X" to -1 so count can be stored as an integer
-    count = as.numeric(ifelse(count == "X", "-1", count))
-  )
-earliest_date = min(ebird_csv$Date)
-latest_date = max(ebird_csv$Date)
-#total_species = nrow(dat %>% distinct(common_name))
-total_checklists = nrow(dat %>% distinct(submission_id))
-hotspot_values =
-  dat %>% 
-  distinct(location, submission_id) %>% 
-  count(location, sort = TRUE) %>%
-  pull(location)
+# # read ebird data
+# ebird_csv = read_csv(
+#   "MyEBirdData.csv",
+#   col_types = cols(
+#     `Submission ID` = col_character(),
+#     `Common Name` = col_character(),
+#     `Scientific Name` = col_character(),
+#     `Taxonomic Order` = col_double(),
+#     Count = col_character(), #!
+#     `State/Province` = col_character(),
+#     County = col_character(),
+#     `Location ID` = col_character(),
+#     Location = col_character(),
+#     Latitude = col_double(),
+#     Longitude = col_double(),
+#     Date = col_date(format = ""),
+#     Time = col_time(format = ""),
+#     Protocol = col_character(),
+#     `Duration (Min)` = col_double(),
+#     `All Obs Reported` = col_double(),
+#     `Distance Traveled (km)` = col_double(),
+#     `Area Covered (ha)` = col_logical(),
+#     `Number of Observers` = col_double(),
+#     `Breeding Code` = col_character(),
+#     `Observation Details` = col_character(),
+#     `Checklist Comments` = col_character(),
+#     `ML Catalog Numbers` = col_character()
+#   ),
+#   na = c("")
+# )
+# # NOTE: parsing issues can be ignored; are due to empty values not being
+# #       included in the data when they occur on the "right end":
+# #       problems(ebird_csv) %>%
+# #       count(expected, actual)
+# 
+# # reorganize and reformat data
+# dat =
+#   ebird_csv %>%
+#   janitor::clean_names() %>%
+#   select(submission_id, date, everything()) %>%
+#   arrange(date, time) %>%
+#   mutate(
+#     year = factor(year(date)),
+#     month = month(date),
+#     day_of_year = yday(date),
+#     us_season = case_when(
+#       month < 3 | month == 12~ "winter",
+#       month < 6 ~ "spring",
+#       month < 9 ~ "summer",
+#       month < 12 ~ "fall",
+#       TRUE ~ NA
+#     ),
+#     us_season = factor(us_season, levels = c("spring", "summer", "fall", "winter")),
+#     month = factor(month(date, label = TRUE)),
+#     # convert "X" to -1 so count can be stored as an integer
+#     count = as.numeric(ifelse(count == "X", "-1", count))
+#   )
+# earliest_date = min(ebird_csv$Date)
+# latest_date = max(ebird_csv$Date)
+# #total_species = nrow(dat %>% distinct(common_name))
+# total_checklists = nrow(dat %>% distinct(submission_id))
+# hotspot_values =
+#   dat %>% 
+#   distinct(location, submission_id) %>% 
+#   count(location, sort = TRUE) %>%
+#   pull(location)
 ```
 
 ```{r}
 #| context: server
 reactive_hotspot_values = reactiveVal(list(NULL))
+earliest_date = reactiveVal()
+latest_date = reactiveVal()
 
 ebird_dat = reactiveVal({
   read_csv("MyEBirdData.csv",
@@ -294,12 +296,25 @@ observe({
         count = as.numeric(ifelse(count == "X", "-1", count))
       )
     ebird_dat(imported_dat)
+    earliest_date(min(imported_dat$date))
+    latest_date(max(imported_dat$date))
   }
 })
 
 selected_dat = reactive({
   req(input$hotspot)
-  selected_dat = ebird_dat() %>% filter(location == input$hotspot)
+  selected_dat = 
+    ebird_dat() %>% 
+    filter(
+      location == input$hotspot
+      )
+  earliest_date(min(selected_dat$date))
+  latest_date(max(selected_dat$date))
+  selected_dat = selected_dat %>%
+    filter(
+      date >= input$date_range[1],
+      date <= input$date_range[2]
+      )
   return(selected_dat)
 })
 
@@ -348,28 +363,40 @@ output$last_trip_text = renderText({
 )
 
 output$imported_data_text = renderText({
-  imported_dat() %>% nrow()
+  paste0(
+    "Imported ",
+    imported_dat() %>% nrow(),
+    " rows of data."
+  )
 })
 
 output$data_preview <- DT::renderDataTable({
   DT::datatable(
     selected_dat() %>% 
-      select(
-        date,
-        common_name,
-        count,
-        #        protocol,
-        us_season
-      ),
+      group_by(common_name) %>% 
+      summarize(first_seen = min(date), last_seen = max(date)) %>% 
+      rename(
+        "Common name" = common_name,
+        "First seen" = first_seen,
+        "Last seen" = last_seen
+      )
+      ,
+      # select(
+      #   date,
+      #   common_name,
+      #   count,
+      #   #        protocol,
+      #   us_season
+      # ),
     options = list(
-      pageLength = 10,
-      scrollX = TRUE,
-      autoWidth = TRUE
-    ),
-    caption = htmltools::tags$caption(
-      style = 'caption-side: top; text-align: center; font-size: 16px; font-weight: bold;',
-      paste('Data from', input$dataset, 'filtered by', input$column, '=', input$filter_value)
-    )
+      pageLength = 10#,
+#      scrollX = TRUE,
+#      autoWidth = TRUE
+    )#,
+    # caption = htmltools::tags$caption(
+    #   style = 'caption-side: top; text-align: center; font-size: 16px; font-weight: bold;',
+    #   paste('Data from', input$dataset, 'filtered by', input$column, '=', input$filter_value)
+    # )
   )
 })
 
@@ -391,9 +418,16 @@ output$hotspot_map = renderLeaflet({
     )
 })
 
+# observeEvent(
+#   c(input$date_range),
+#   {
+#     @
+#   }
+# )
+
 observeEvent(
   c(input$dataset, input$upload),
-  {
+  { 
     if (input$dataset == "alphabetically"){
       hotspot_list = 
         ebird_dat() %>% 
@@ -420,11 +454,28 @@ observeEvent(
         pull(location)
     }
     reactive_hotspot_values(hotspot_list)
+    earliest_date(min(ebird_dat()$date))
+    latest_date(max(ebird_dat()$date))
     updateSelectInput(
       session,
       "hotspot",
       choices = reactive_hotspot_values(),
-      selected = reactive_hotspot_values()[1]
+      selected = NULL
+    )
+    updateSliderInput(
+      session,
+      "dateRange",
+      min = earliest_date(),
+      max = latest_date(),
+      value = c(earliest_date(), latest_date())
+    )
+    updateDateRangeInput(
+      session,
+      "date_range",
+      start = earliest_date(),
+      end = latest_date(),
+      min = earliest_date(),
+      max = latest_date()
     )
   })
 ```
@@ -437,21 +488,29 @@ observeEvent(
 selectInput(
   "hotspot", 
   "Select a hotspot:",
-  choices = hotspot_values,
-  selected = hotspot_values[1]
+  choices = NULL,
+  selected = NULL
 )
 
 selectInput(
   "dataset", 
-  "Hot spot sorting:",
+  "Hotspot list sorting:",
   choices = list("checklist count", "alphabetically")
 )
 
-sliderInput("dateRange", "Date Range:",
-            min = earliest_date,
-            max = latest_date,
-            value = c(earliest_date, latest_date),
-            timeFormat = "%b %Y")
+dateRangeInput("date_range", "Date range:",
+                 start  = "2001-01-01",
+                 end    = "2010-12-31",
+                 min    = "2001-01-01",
+                 max    = "2012-12-21",
+                 format = "mm/dd/yy",
+                 separator = " - ")
+
+# sliderInput("dateRange", "Date Range:",
+#             min = as.Date("2025-01-01"),
+#             max = as.Date("2025-03-01"),
+#             value = c(as.Date("2025-01-01"), as.Date("2025-03-01")),
+#             timeFormat = "%b %Y")
 
 # selectInput("category", "Category:",
 #             c("All Categories" = "all",
@@ -478,13 +537,16 @@ fileInput(
 )
 
 textOutput("imported_data_text")
+
+leafletOutput("hotspot_map")
+
 # div(
 #   h4("Dashboard Info"),
 #   p("Last updated: March 19, 2025")
 # )
 ```
 
-# Main content {orientation="rows"}
+# Hotspot {orientation="rows"}
 
 ## Row {height=10%}
 
