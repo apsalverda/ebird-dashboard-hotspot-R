@@ -6,7 +6,12 @@ format:
     orientation: columns
     theme: cosmo
     css: styles.css
-    scrolling: true
+    scrolling: FALSE
+    nav-buttons:
+      - icon: github
+        href: https://github.com/apsalverda
+      - icon: linkedin
+        href: https://www.linkedin.com/in/anne-pier-salverda-37ab7042/
     sidebar:
       style: "docked"
       background: "light"
@@ -36,6 +41,11 @@ library(bslib)
 library(bsicons)
 library(leaflet)
 library(ggiraph)
+
+original_ebird_green = "#2F7742"
+ebird_green = "#70c687"
+ebird_yellow = "#FFD800"
+ebird_red = "#DA1C13"
 
 ordinal_date_suffix = function(date_str, year = TRUE, markdown_subscript = FALSE) {
   date_obj = as.Date(date_str, "%Y-%m-%d")
@@ -422,13 +432,21 @@ output$species_count_plot = renderGirafe({
         onclick = sprintf("window.open(\"https://ebird.org/checklist/%s\")", submission_id)
       )
     ) +
+    theme(
+      panel.grid = element_blank()
+    ) +
     labs(
       x = "",
       y = "Total species reported"
     )
-  girafe(ggobj = plot, pointsize = 20) %>% 
+  girafe(
+    ggobj = plot, 
+    pointsize = 40,
+    width_svg = (0.70 * input$pltChange$width / input$pltChange$dpi),
+    height_svg = (0.42 * input$pltChange$height / input$pltChange$dpi)
+  ) %>% 
     girafe_options(
-      opts_sizing(rescale = FALSE, width = 1),
+      opts_sizing(rescale = FALSE),
       options = list(
         opts_tooltip(
           use_fill = TRUE,
@@ -618,6 +636,24 @@ fileInput(
   multiple = FALSE
 )
 
+# https://stackoverflow.com/questions/65267602/can-a-ggiraph-interactive-plot-be-the-size-of-the-window-in-r-shiny
+tags$body(tags$div(id="ppitest", style="width:1in;visible:hidden;padding:0px"))
+tags$script('$(document).on("shiny:connected", function(e) {
+                                    var w = window.innerWidth;
+                                    var h = window.innerHeight;
+                                    var d =  document.getElementById("ppitest").offsetWidth;
+                                    var obj = {width: w, height: h, dpi: d};
+                                    Shiny.onInputChange("pltChange", obj);
+                                });
+                                $(window).resize(function(e) {
+                                    var w = $(this).width();
+                                    var h = $(this).height();
+                                    var d =  document.getElementById("ppitest").offsetWidth;
+                                    var obj = {width: w, height: h, dpi: d};
+                                    Shiny.onInputChange("pltChange", obj);
+                                });
+                            ')
+
 textOutput("imported_data_text")
 
 leafletOutput("hotspot_map")
@@ -628,10 +664,9 @@ leafletOutput("hotspot_map")
 # )
 ```
 
-# Hotspot {orientation="rows"}
+# Hotspot tab {orientation="rows"}
 
-## Row {height=10%}
-
+## Value boxes {height=10%}
 <!-- ::: {.card} -->
 <!-- Sandra L. Frankel Nature Park (Brickyard Trail) -->
 <!-- `r print("Brickyard Trail")` -->
@@ -650,42 +685,30 @@ leafletOutput("hotspot_map")
 box1 = value_box(
   title = "Species",
   value = textOutput("total_species_text"),
-  showcase = bs_icon("feather"),
-  theme = "primary",
-  full_screen = FALSE,
-  height = .9
+#  showcase = bs_icon("feather"),
+  theme = "primary"
 )
 box2 = value_box(
   title = "Checklists",
   value = textOutput("total_checklists_text"),
-  showcase = bs_icon("list-check"),
-  theme = "primary",
-  full_screen = FALSE
+#  showcase = bs_icon("list-check"),
+  theme = "primary"
 )
 box3 = value_box(
   title = "Hours",
   value = textOutput("total_time_text"),
-  showcase = bs_icon("stopwatch"),
-  theme = "primary",
-  full_screen = FALSE
+#  showcase = bs_icon("stopwatch"),
+  theme = "primary"
 )
 box4 = value_box(
   title = "Max checklist species",
   value = textOutput("max_species_text"),
-  showcase = bs_icon("trophy"),
-  theme = "success",
-  full_screen = FALSE
+#  showcase = bs_icon("trophy"),
+  theme = value_box_theme(bg = original_ebird_green, fg = "white")
 )
-# box4 = value_box(
-#   title = "Last Trip",
-#   value = textOutput("last_trip_text"),
-#   showcase = bs_icon("calendar-event"),
-#   theme = "success",
-#   full_screen = FALSE
-#   #    style = "height: 100px; resize: both"
-# )
-layout_columns(
-  col_widths = c(3, 3, 3, 3),
+layout_column_wrap(
+  width = 1 / 4,
+  heights_equal = "all",
   box1,
   box2,
   box3,
@@ -693,6 +716,15 @@ layout_columns(
 )
 
 
+
+
+# layout_columns(
+#   col_widths = c(3, 3, 3, 3),
+#   box1,
+#   box2,
+#   box3,
+#   box4
+# )
 # value_boxes = list(
 #   value_box(
 #     title = "Species",
@@ -764,13 +796,10 @@ layout_columns(
 # )
 ```
 
-## Row {height=60%, .flow}
+## Species plot {height=60%}
 
-::: {layout="[[1, 1]]"}
 ```{r}
-#| title: ""
-##| fig-height: 8
-##| fig-width: 12
+#| title: Species reported by checklist
 girafeOutput("species_count_plot")
 # iris %>% 
 #   ggplot(aes(x = Sepal.Length, y = Sepal.Width, color = Species)) + 
@@ -787,14 +816,11 @@ girafeOutput("species_count_plot")
 # #| title: "Map"
 # leafletOutput("hotspot_map")
 ```
-:::
 
-## Row {height=30%, .flow}
-
-### Observations
+## Species table {height=30%}
 
 ```{r}
-#| title: "Observations"
+##| title: "Observations"
 
 DT::dataTableOutput("data_preview")
 # gt(observations) %>%
