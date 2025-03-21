@@ -30,13 +30,31 @@ server: shiny
 library(tidyverse)
 library(ggplot2)
 library(gt)
-library(bslib)
 library(plotly)
 library(shiny)
 library(bslib)
 library(bsicons)
 library(leaflet)
+library(ggiraph)
 
+ordinal_date_suffix = function(date_str, year = TRUE, markdown_subscript = FALSE) {
+  date_obj = as.Date(date_str, "%Y-%m-%d")
+  day_suffix = c("st", "nd", "rd", rep("th", 17), "st", "nd", "rd", rep("th", 7), "st")
+  if (markdown_subscript == TRUE){ day_suffix = paste0("^", day_suffix, "^") }
+  formatted_date = paste0(
+    month(date_obj, label = TRUE, abbr = FALSE),
+    " ",
+    day(date_obj), 
+    day_suffix[day(date_obj)],
+    ifelse(year == TRUE, paste0(
+      " ",
+      year(date_obj)
+    ),
+    ""
+    )
+  )
+  return(formatted_date)
+}
 # # read ebird data
 # ebird_csv = read_csv(
 #   "MyEBirdData.csv",
@@ -383,14 +401,54 @@ output$imported_data_text = renderText({
   )
 })
 
-output$species_count_plot = renderPlot({
-  selected_dat() %>% 
+output$species_count_plot = renderGirafe({
+  plot = 
+    selected_dat() %>% 
     count(submission_id, date) %>% 
+    mutate(
+      my_label = paste(
+        n,
+        "species on ", 
+        ordinal_date_suffix(date)
+      )
+    ) %>% 
     ggplot(aes(x = date, y = n)) + 
-    geom_point() +
+    geom_point_interactive(
+      shape = 16,
+      aes(
+        tooltip = my_label,
+        data_id = submission_id,
+        tooltip_fill = date,
+        onclick = sprintf("window.open(\"https://ebird.org/checklist/%s\")", submission_id)
+      )
+    ) +
     labs(
       x = "",
       y = "Total species reported"
+    )
+  girafe(ggobj = plot, pointsize = 20) %>% 
+    girafe_options(
+      opts_sizing(rescale = FALSE, width = 1),
+      options = list(
+        opts_tooltip(
+          use_fill = TRUE,
+          #    opacity = .65,
+          offx = 10,
+          offy = 0
+          #    use_fill = TRUE,
+          #    css = "color:blue; background-color:red, fill-opacity:.5;"
+          #    tooltip_fill = "white"
+        ),
+        #  opts_hover(css = "stroke:yellow;stroke-width:3px;fill-opacity:0.8;")
+        opts_hover(
+          css = "stroke:black; stroke-width:1px;"
+        ),
+        opts_toolbar(
+          fixed = TRUE,
+          #    position = "bottomright",
+          pngname = "ebird-species-accumulation-curve.png"
+        )
+      )
     )
 })
 
@@ -710,9 +768,10 @@ layout_columns(
 
 ::: {layout="[[1, 1]]"}
 ```{r}
-#| title: "A plot"
-#| fig-height: 8
-plotOutput("species_count_plot")
+#| title: ""
+##| fig-height: 8
+##| fig-width: 12
+girafeOutput("species_count_plot")
 # iris %>% 
 #   ggplot(aes(x = Sepal.Length, y = Sepal.Width, color = Species)) + 
 #   geom_point()
@@ -724,10 +783,10 @@ plotOutput("species_count_plot")
 #   theme(legend.position = "none")
 ```
 
-# ```{r}
+```{r}
 # #| title: "Map"
 # leafletOutput("hotspot_map")
-# ```
+```
 :::
 
 ## Row {height=30%, .flow}
