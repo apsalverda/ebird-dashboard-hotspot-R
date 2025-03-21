@@ -307,14 +307,14 @@ selected_dat = reactive({
     ebird_dat() %>% 
     filter(
       location == input$hotspot
-      )
+    )
   earliest_date(min(selected_dat$date))
   latest_date(max(selected_dat$date))
   selected_dat = selected_dat %>%
     filter(
       date >= input$date_range[1],
       date <= input$date_range[2]
-      )
+    )
   return(selected_dat)
 })
 
@@ -343,7 +343,8 @@ total_time = reactive({
     round(1)
 })
 output$total_time_text = renderText({
-  paste(total_time(), " hours")
+  total_time()
+  #  paste(total_time(), " hours")
 }
 )
 
@@ -362,12 +363,35 @@ output$last_trip_text = renderText({
 }
 )
 
+max_species = reactive({
+  selected_dat() %>% 
+    count(submission_id) %>%
+    arrange(desc(n)) %>% 
+    slice(1) %>% 
+    pull(n)
+})
+
+output$max_species_text = renderText({
+  max_species()
+})
+
 output$imported_data_text = renderText({
   paste0(
     "Imported ",
     imported_dat() %>% nrow(),
     " rows of data."
   )
+})
+
+output$species_count_plot = renderPlot({
+  selected_dat() %>% 
+    count(submission_id, date) %>% 
+    ggplot(aes(x = date, y = n)) + 
+    geom_point() +
+    labs(
+      x = "",
+      y = "Total species reported"
+    )
 })
 
 output$data_preview <- DT::renderDataTable({
@@ -380,18 +404,18 @@ output$data_preview <- DT::renderDataTable({
         "First seen" = first_seen,
         "Last seen" = last_seen
       )
-      ,
-      # select(
-      #   date,
-      #   common_name,
-      #   count,
-      #   #        protocol,
-      #   us_season
-      # ),
+    ,
+    # select(
+    #   date,
+    #   common_name,
+    #   count,
+    #   #        protocol,
+    #   us_season
+    # ),
     options = list(
       pageLength = 10#,
-#      scrollX = TRUE,
-#      autoWidth = TRUE
+      #      scrollX = TRUE,
+      #      autoWidth = TRUE
     )#,
     # caption = htmltools::tags$caption(
     #   style = 'caption-side: top; text-align: center; font-size: 16px; font-weight: bold;',
@@ -499,12 +523,12 @@ selectInput(
 )
 
 dateRangeInput("date_range", "Date range:",
-                 start  = "2001-01-01",
-                 end    = "2010-12-31",
-                 min    = "2001-01-01",
-                 max    = "2012-12-21",
-                 format = "mm/dd/yy",
-                 separator = " - ")
+               start  = "2001-01-01",
+               end    = "2010-12-31",
+               min    = "2001-01-01",
+               max    = "2012-12-21",
+               format = "mm/dd/yy",
+               separator = " - ")
 
 # sliderInput("dateRange", "Date Range:",
 #             min = as.Date("2025-01-01"),
@@ -565,46 +589,90 @@ leafletOutput("hotspot_map")
 ```
 
 ```{r}
-value_box(
-  title = "Total Species",
+box1 = value_box(
+  title = "Species",
   value = textOutput("total_species_text"),
   showcase = bs_icon("feather"),
   theme = "primary",
-  full_screen = FALSE
+  full_screen = FALSE,
+  height = .9
 )
-```
-
-```{r}
-value_box(
-  title = "Total Checklists",
+box2 = value_box(
+  title = "Checklists",
   value = textOutput("total_checklists_text"),
   showcase = bs_icon("list-check"),
   theme = "primary",
   full_screen = FALSE
 )
-```
-
-```{r}
-value_box(
-  title = "Total Time",
+box3 = value_box(
+  title = "Hours",
   value = textOutput("total_time_text"),
   showcase = bs_icon("stopwatch"),
   theme = "primary",
   full_screen = FALSE
 )
-```
-
-
-```{r}
-value_box(
-  title = "Last Trip",
-  value = textOutput("last_trip_text"),
-  showcase = bs_icon("calendar-event"),
+box4 = value_box(
+  title = "Max checklist species",
+  value = textOutput("max_species_text"),
+  showcase = bs_icon("trophy"),
   theme = "success",
   full_screen = FALSE
 )
-```
+# box4 = value_box(
+#   title = "Last Trip",
+#   value = textOutput("last_trip_text"),
+#   showcase = bs_icon("calendar-event"),
+#   theme = "success",
+#   full_screen = FALSE
+#   #    style = "height: 100px; resize: both"
+# )
+layout_columns(
+  col_widths = c(3, 3, 3, 3),
+  box1,
+  box2,
+  box3,
+  box4
+)
 
+
+# value_boxes = list(
+#   value_box(
+#     title = "Species",
+#     value = textOutput("total_species_text"),
+#     showcase = bs_icon("feather"),
+#     theme = "primary",
+#     full_screen = FALSE
+#   ),
+#   value_box(
+#     title = "Checklists",
+#     value = textOutput("total_checklists_text"),
+#     showcase = bs_icon("list-check"),
+#     theme = "primary",
+#     full_screen = FALSE
+#   ),
+#   value_box(
+#     title = "Hours",
+#     value = textOutput("total_time_text"),
+#     showcase = bs_icon("stopwatch"),
+#     theme = "primary",
+#     full_screen = FALSE
+#   ),
+#   value_box(
+#     title = "Last Trip",
+#     value = textOutput("last_trip_text", container = h4),
+#     showcase = bs_icon("calendar-event"),
+#     theme = "success",
+#     full_screen = FALSE
+# #    style = "height: 100px; resize: both"
+#   )
+# )
+# layout_column_wrap(
+# #  height = "150px",
+#   width_default = "100%",
+#   width = c("25%", "25%", "25%", "25%"),
+#   !!!value_boxes
+# )
+```
 
 ```{r}
 # #| content: valuebox
@@ -644,9 +712,10 @@ value_box(
 ```{r}
 #| title: "A plot"
 #| fig-height: 8
-iris %>% 
-  ggplot(aes(x = Sepal.Length, y = Sepal.Width, color = Species)) + 
-  geom_point()
+plotOutput("species_count_plot")
+# iris %>% 
+#   ggplot(aes(x = Sepal.Length, y = Sepal.Width, color = Species)) + 
+#   geom_point()
 # ggplot(data, aes(x = date, y = value1)) +
 #   geom_line(color = "#007bff") +
 #   geom_smooth(method = "loess", se = FALSE, color = "#6c757d") +
@@ -655,10 +724,10 @@ iris %>%
 #   theme(legend.position = "none")
 ```
 
-```{r}
-#| title: "Map"
-leafletOutput("hotspot_map")
-```
+# ```{r}
+# #| title: "Map"
+# leafletOutput("hotspot_map")
+# ```
 :::
 
 ## Row {height=30%, .flow}
