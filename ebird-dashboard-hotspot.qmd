@@ -1,12 +1,11 @@
 ---
-title: "eBird Hotspot Dashboard"
-author: "Anne Pier Salverda"
+title: "eBird User Dashboard"
+#author: "Anne Pier Salverda"
 format: 
   dashboard:
     orientation: columns
     theme: cosmo
-    css: styles.css
-    scrolling: FALSE
+    css: style.css
     nav-buttons:
       - icon: github
         href: https://github.com/apsalverda
@@ -16,7 +15,6 @@ format:
       style: "docked"
       background: "light"
       collapse-level: 1
-      width: 250px
       align: left
       tools:
         - icon: sliders
@@ -41,6 +39,7 @@ library(bslib)
 library(bsicons)
 library(leaflet)
 library(ggiraph)
+library(formattable)
 
 original_ebird_green = "#2F7742"
 ebird_green = "#70c687"
@@ -138,6 +137,9 @@ ordinal_date_suffix = function(date_str, year = TRUE, markdown_subscript = FALSE
 reactive_hotspot_values = reactiveVal(list(NULL))
 earliest_date = reactiveVal()
 latest_date = reactiveVal()
+n_rows_data = reactiveVal()
+n_checklists = reactiveVal()
+n_species = reactiveVal()
 
 ebird_dat = reactiveVal({
   read_csv("MyEBirdData.csv",
@@ -326,6 +328,18 @@ observe({
     ebird_dat(imported_dat)
     earliest_date(min(imported_dat$date))
     latest_date(max(imported_dat$date))
+    n_rows_data(nrow(imported_dat))
+    n_checklists(
+      imported_dat %>%
+        #        filter(protocol != "eBird - Casual Observation") %>%
+        distinct(submission_id) %>%
+        nrow()
+    )
+    n_species(
+      imported_dat %>% 
+        #        filter(protocol != "eBird - Casual Observation") %>%
+        distinct(common_name) %>%
+        nrow())
   }
 })
 
@@ -338,6 +352,8 @@ selected_dat = reactive({
     )
   earliest_date(min(selected_dat$date))
   latest_date(max(selected_dat$date))
+  #  n_rows_data(nrow(selected_dat))
+  #  n_checklists(selected_dat %>% distinct(submission_id) %>% nrow())
   selected_dat = selected_dat %>%
     filter(
       date >= input$date_range[1],
@@ -355,7 +371,10 @@ output$total_species_text = renderText({
 )
 
 total_checklists = reactive({
-  selected_dat() %>% distinct(submission_id) %>% nrow()
+  selected_dat() %>% 
+    #    filter(protocol != "eBird - Casual Observation") %>%
+    distinct(submission_id) %>%
+    nrow()
 })
 output$total_checklists_text = renderText({
   total_checklists()
@@ -370,6 +389,12 @@ total_time = reactive({
     pull(total_time_hours) %>% 
     round(1)
 })
+
+total_observations = reactive({
+  selected_dat() %>%
+    nrow()
+})
+
 output$total_time_text = renderText({
   total_time()
   #  paste(total_time(), " hours")
@@ -391,7 +416,11 @@ output$last_trip_text = renderText({
 }
 )
 
-max_species = reactive({
+output$total_observations_text = renderText({
+  total_observations()
+})
+
+max_checklist = reactive({
   selected_dat() %>% 
     count(submission_id) %>%
     arrange(desc(n)) %>% 
@@ -399,15 +428,43 @@ max_species = reactive({
     pull(n)
 })
 
-output$max_species_text = renderText({
-  max_species()
+output$max_checklist_text = renderText({
+  max_checklist()
 })
 
-output$imported_data_text = renderText({
+# output$imported_data_text = renderText({
+#   paste0(
+#     "Imported ",
+#     imported_dat() %>% nrow(),
+#     " rows of data."
+#   )
+# })
+
+output$imported_data_statistics = renderText({
+  ifelse(
+    is.null(input$upload$name),
+    "",
+    paste0(
+      " ",
+      n_rows_data(),
+      " observations\n ",
+      n_checklists(),
+      " checklists\n ",
+      n_species(),
+      " species"
+    )
+  )
+})
+
+output$import_filename = renderText({
   paste0(
-    "Imported ",
-    imported_dat() %>% nrow(),
-    " rows of data."
+    ifelse(
+      is.null(input$upload$name),
+      "",
+      paste0(
+        input$upload$name
+      )
+    )
   )
 })
 
@@ -432,73 +489,147 @@ output$species_count_plot = renderGirafe({
         onclick = sprintf("window.open(\"https://ebird.org/checklist/%s\")", submission_id)
       )
     ) +
+    ylim(0, NA) +
+    scale_x_date() +
     theme(
       panel.grid = element_blank()
     ) +
     labs(
+      title = "",
       x = "",
       y = "Total species reported"
     )
   girafe(
     ggobj = plot, 
     pointsize = 40,
-    width_svg = (0.70 * input$pltChange$width / input$pltChange$dpi),
-    height_svg = (0.42 * input$pltChange$height / input$pltChange$dpi)
+    width_svg = (0.98 * (input$pltChange$width - 300) / input$pltChange$dpi),
+    height_svg = (0.42 * (input$pltChange$height - 100) / input$pltChange$dpi)
   ) %>% 
     girafe_options(
       opts_sizing(rescale = FALSE),
-      options = list(
-        opts_tooltip(
-          use_fill = TRUE,
-          #    opacity = .65,
-          offx = 10,
-          offy = 0
-          #    use_fill = TRUE,
-          #    css = "color:blue; background-color:red, fill-opacity:.5;"
-          #    tooltip_fill = "white"
-        ),
-        #  opts_hover(css = "stroke:yellow;stroke-width:3px;fill-opacity:0.8;")
-        opts_hover(
-          css = "stroke:black; stroke-width:1px;"
-        ),
-        opts_toolbar(
-          fixed = TRUE,
-          #    position = "bottomright",
-          pngname = "ebird-species-accumulation-curve.png"
-        )
+      opts_toolbar(
+        fixed = TRUE,
+        #    position = "bottomright",
+        pngname = "ebird-dashboard.png",
+        hidden = c("selection", "saveaspng")
+      ),
+      opts_tooltip(
+        use_fill = TRUE,
+        #    opacity = .65,
+        offx = 10,
+        offy = 0
+        #    use_fill = TRUE,
+        #    css = "color:blue; background-color:red, fill-opacity:.5;"
+        #    tooltip_fill = "white"
+      ),
+      #  opts_hover(css = "stroke:yellow;stroke-width:3px;fill-opacity:0.8;")
+      opts_hover(
+        css = "stroke:black; stroke-width:1px;"
       )
     )
 })
 
-output$data_preview <- DT::renderDataTable({
-  DT::datatable(
-    selected_dat() %>% 
-      group_by(common_name) %>% 
-      summarize(first_seen = min(date), last_seen = max(date)) %>% 
-      rename(
-        "Common name" = common_name,
-        "First seen" = first_seen,
-        "Last seen" = last_seen
-      )
-    ,
-    # select(
-    #   date,
-    #   common_name,
-    #   count,
-    #   #        protocol,
-    #   us_season
-    # ),
-    options = list(
-      pageLength = 10#,
-      #      scrollX = TRUE,
-      #      autoWidth = TRUE
-    )#,
-    # caption = htmltools::tags$caption(
-    #   style = 'caption-side: top; text-align: center; font-size: 16px; font-weight: bold;',
-    #   paste('Data from', input$dataset, 'filtered by', input$column, '=', input$filter_value)
-    # )
+bg = function(start, end, color, ...) {
+  paste(
+    "linear-gradient(90deg,transparent ",
+    percent(start),
+    ", ",
+    color, 
+    percent(start), 
+    ", ",
+    color, 
+    percent(end),
+    ", transparent", percent(end),
+    ")"
   )
+} 
+
+xnormalize = function(x, y){
+  x = y + (x / 100) / 2
+}
+
+my_color_bar = function(...){
+  formatter(
+    "span",
+    style = function(x) style(
+      display = "inline-block",
+      "text-align" = "left",
+      "width" = "100%",
+      "background" = bg(.2, xnormalize(x, .2), ebird_green)
+    )
+  )
+}
+
+output$data_preview = DT::renderDT({
+  selected_dat() %>%
+    # mutate(
+    #   checklist = ifelse(
+    #     protocol == "eBird - Traveling Count",
+    #     submission_id,
+    #     NA
+    #   )
+    # ) %>%
+    mutate(n_checklists = n_distinct(submission_id, na.rm = TRUE)) %>%
+    group_by(common_name) %>%
+    summarize(
+      first_seen = min(date),
+      last_seen = max(date),
+      perc_checklists = (100 * (n() / max(n_checklists))) %>% round(1)
+    ) %>%
+    mutate(
+      perc_checklists = my_color_bar()(perc_checklists)
+    ) %>% 
+    rename(
+      "Common name" = common_name,
+      "First seen" = first_seen,
+      "Last seen" = last_seen,
+      "Percentage checklists" = perc_checklists
+    ) %>%
+    formattable() %>% 
+    as.datatable(
+      rownames = FALSE,
+      options = list(
+        dom = "ft",
+        scrollY = "200px",
+        pageLength = 999999
+      )
+    )
 })
+
+# output$data_preview = renderDataTable({
+#   DT::datatable(
+#     selected_dat() %>% 
+#       mutate(
+#         checklist = ifelse(
+#           protocol == "eBird - Traveling Count",
+#         submission_id,
+#         NA
+#         )
+#       ) %>%
+#       mutate(n_checklists = n_distinct(checklist, na.rm = TRUE)) %>% 
+#       group_by(common_name) %>% 
+#       summarize(
+#         first_seen = min(date),
+#         last_seen = max(date),
+#         perc_checklists = (100 * (n() / max(n_checklists)))  %>% round(1)
+#       ) %>% 
+#       rename(
+#         "Common name" = common_name,
+#         "First seen" = first_seen,
+#         "Last seen" = last_seen,
+#         "Percentage checklists" = perc_checklists
+#       ),
+#     options = list(
+#       pageLength = 10#,
+#       #      scrollX = TRUE,
+#       #      autoWidth = TRUE
+#     )#,
+#     # caption = htmltools::tags$caption(
+#     #   style = 'caption-side: top; text-align: center; font-size: 16px; font-weight: bold;',
+#     #   paste('Data from', input$hotspot_sorting, 'filtered by', input$column, '=', input$filter_value)
+#     # )
+#   )
+# })
 
 output$hotspot_map = renderLeaflet({
   top_location_info =
@@ -516,7 +647,8 @@ output$hotspot_map = renderLeaflet({
       lat = top_location_info$latitude, 
       popup = top_location_info$location
     )
-})
+}
+)
 
 # observeEvent(
 #   c(input$date_range),
@@ -526,9 +658,9 @@ output$hotspot_map = renderLeaflet({
 # )
 
 observeEvent(
-  c(input$dataset, input$upload),
+  c(input$hotspot_sorting, input$upload),
   { 
-    if (input$dataset == "alphabetically"){
+    if (input$hotspot_sorting == "alphabetically"){
       hotspot_list = 
         ebird_dat() %>% 
         distinct(location) %>% 
@@ -547,6 +679,7 @@ observeEvent(
       hotspot_list = hotspot_list %>% pull()
     } else
     {
+      # arrange by number of checklists reported
       hotspot_list =
         ebird_dat() %>%
         distinct(location, submission_id) %>% 
@@ -556,6 +689,8 @@ observeEvent(
     reactive_hotspot_values(hotspot_list)
     earliest_date(min(ebird_dat()$date))
     latest_date(max(ebird_dat()$date))
+    #    n_rows_data(nrow(ebird_dat()))
+    #    n_checklists(ebird_dat() %>% distinct(submission_id) %>% nrow())
     updateSelectInput(
       session,
       "hotspot",
@@ -580,25 +715,27 @@ observeEvent(
   })
 ```
 
-# Sidebar {.sidebar}
+## Sidebar {.sidebar width="225px"}
 
 ```{r}
 #| title: "Filters"
 
 selectInput(
   "hotspot", 
-  "Select a hotspot:",
+  "Hotspot",
   choices = NULL,
   selected = NULL
 )
 
 selectInput(
-  "dataset", 
-  "Hotspot list sorting:",
+  "hotspot_sorting", 
+  "Hotspot list sorting",
   choices = list("checklist count", "alphabetically")
 )
 
-dateRangeInput("date_range", "Date range:",
+hr()
+
+dateRangeInput("date_range", "Date range",
                start  = "2001-01-01",
                end    = "2010-12-31",
                min    = "2001-01-01",
@@ -629,94 +766,87 @@ dateRangeInput("date_range", "Date range:",
 
 hr()
 
-fileInput(
-  "upload",
-  "Import eBird data",
-  accept = ".csv",
-  multiple = FALSE
+leafletOutput("hotspot_map", height = "200px")
+
+hr()
+
+a(
+  "Download personal eBird data",
+  href = "https://ebird.org/downloadMyData",
+  target="_blank"
 )
 
-# https://stackoverflow.com/questions/65267602/can-a-ggiraph-interactive-plot-be-the-size-of-the-window-in-r-shiny
-tags$body(tags$div(id="ppitest", style="width:1in;visible:hidden;padding:0px"))
-tags$script('$(document).on("shiny:connected", function(e) {
-                                    var w = window.innerWidth;
-                                    var h = window.innerHeight;
-                                    var d =  document.getElementById("ppitest").offsetWidth;
-                                    var obj = {width: w, height: h, dpi: d};
-                                    Shiny.onInputChange("pltChange", obj);
-                                });
-                                $(window).resize(function(e) {
-                                    var w = $(this).width();
-                                    var h = $(this).height();
-                                    var d =  document.getElementById("ppitest").offsetWidth;
-                                    var obj = {width: w, height: h, dpi: d};
-                                    Shiny.onInputChange("pltChange", obj);
-                                });
-                            ')
+p()
 
-textOutput("imported_data_text")
+fileInput(
+  "upload",
+  "Import downloaded eBird data",
+  accept = ".csv",
+  multiple = FALSE,
+  placeholder = "",
+  width = "100%"
+)
 
-leafletOutput("hotspot_map")
+verbatimTextOutput("import_filename")
+
+verbatimTextOutput("imported_data_statistics")
 
 # div(
 #   h4("Dashboard Info"),
 #   p("Last updated: March 19, 2025")
 # )
+
+hr()
+
+p("Created by ", a("Anne Pier Salverda ", href = "mailto:salverda@yahoo.com?subject='Your eBird dashboard'"), bs_icon("feather"))
+
+
 ```
 
-# Hotspot tab {orientation="rows"}
+# Hotspot {orientation="rows"}
 
-## Value boxes {height=10%}
-<!-- ::: {.card} -->
-<!-- Sandra L. Frankel Nature Park (Brickyard Trail) -->
-<!-- `r print("Brickyard Trail")` -->
-<!-- ::: -->
+## Value boxes {height=11%}
 
 ```{r}
-# value_box(
-#   title = "",
-#   value = textOutput("ss"),
-#   showcase = bs_icon("geo-alt"),
-#   color = "primary"
-# )
-```
-
-```{r}
+#tags$body(tags$style(HTML('.bslib-value-box .value-box-title {font-size: 0.5rem;}')))
 box1 = value_box(
   title = "Species",
   value = textOutput("total_species_text"),
-#  showcase = bs_icon("feather"),
-  theme = "primary"
-)
+  #  showcase = bs_icon("feather"),
+  theme = "primary",
+  #  style = 'background-color: #5092D0!important;')
+  style = "font-size: 50px;")
 box2 = value_box(
   title = "Checklists",
   value = textOutput("total_checklists_text"),
-#  showcase = bs_icon("list-check"),
+  #  showcase = bs_icon("list-check"),
   theme = "primary"
 )
 box3 = value_box(
-  title = "Hours",
-  value = textOutput("total_time_text"),
-#  showcase = bs_icon("stopwatch"),
+  title = "Max checklist",
+  value = textOutput("max_checklist_text"),
+  #  showcase = bs_icon("trophy"),
+  # theme = value_box_theme(bg = original_ebird_green, fg = "white")
   theme = "primary"
 )
+
 box4 = value_box(
-  title = "Max checklist species",
-  value = textOutput("max_species_text"),
-#  showcase = bs_icon("trophy"),
-  theme = value_box_theme(bg = original_ebird_green, fg = "white")
+  title = "Hours",
+  value = textOutput("total_time_text"),
+  #  showcase = bs_icon("stopwatch"),
+  theme = "primary"
+)
+box5 = value_box(
+  title = "Observations",
+  value = textOutput("total_observations_text"),
+  theme = "primary"
 )
 layout_column_wrap(
-  width = 1 / 4,
+  width = 1/5,
+  gap = "3px",
   heights_equal = "all",
-  box1,
-  box2,
-  box3,
-  box4
+  box1, box2, box3, box4, box5
 )
-
-
-
 
 # layout_columns(
 #   col_widths = c(3, 3, 3, 3),
@@ -764,52 +894,28 @@ layout_column_wrap(
 # )
 ```
 
-```{r}
-# #| content: valuebox
-# #| title: "Total Species"
-# #| icon: feather
-# #| color: primary
-# list(
-#   value = textOutput("total_species_text"),
-#   icon = "feather",
-#   color = "primary"
-# )
-```
+## Species plot {height=55%}
 
 ```{r}
-# #| content: valuebox
-# #| title: "Total Checklists"
-# list(
-#   value = total_checklists,
-#   icon = "list-check",
-#   color = "secondary"
-# )
-```
-
-```{r}
-# #| content: valuebox
-# #| title: "Last Trip"
-# list(
-#   value = "03/19/25",
-#   icon = "calendar-event",
-#   color = "success"
-# )
-```
-
-## Species plot {height=60%}
-
-```{r}
-#| title: Species reported by checklist
+#| title: Click on a data point to open the checklist in eBird
+# https://stackoverflow.com/questions/65267602/can-a-ggiraph-interactive-plot-be-the-size-of-the-window-in-r-shiny
+tags$body(tags$div(id="ppitest", style="width:1in;visible:hidden;padding:0px"))
+tags$script('$(document).on("shiny:connected", function(e) {
+                                    var w = window.innerWidth;
+                                    var h = window.innerHeight;
+                                    var d =  document.getElementById("ppitest").offsetWidth;
+                                    var obj = {width: w, height: h, dpi: d};
+                                    Shiny.onInputChange("pltChange", obj);
+                                });
+                                $(window).resize(function(e) {
+                                    var w = $(this).width();
+                                    var h = $(this).height();
+                                    var d =  document.getElementById("ppitest").offsetWidth;
+                                    var obj = {width: w, height: h, dpi: d};
+                                    Shiny.onInputChange("pltChange", obj);
+                                });
+                            ')
 girafeOutput("species_count_plot")
-# iris %>% 
-#   ggplot(aes(x = Sepal.Length, y = Sepal.Width, color = Species)) + 
-#   geom_point()
-# ggplot(data, aes(x = date, y = value1)) +
-#   geom_line(color = "#007bff") +
-#   geom_smooth(method = "loess", se = FALSE, color = "#6c757d") +
-#   theme_minimal() +
-#   labs(x = "Date", y = "Value") +
-#   theme(legend.position = "none")
 ```
 
 ```{r}
@@ -817,12 +923,12 @@ girafeOutput("species_count_plot")
 # leafletOutput("hotspot_map")
 ```
 
-## Species table {height=30%}
+## Species table {height=38%}
 
 ```{r}
 ##| title: "Observations"
-
 DT::dataTableOutput("data_preview")
+
 # gt(observations) %>%
 #   tab_header(
 #     title = "Key Observations"
