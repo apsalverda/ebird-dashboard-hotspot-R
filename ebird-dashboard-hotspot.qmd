@@ -9,22 +9,24 @@ format:
     nav-buttons:
       - icon: github
         href: https://github.com/apsalverda
+        target: _blank
       - icon: linkedin
         href: https://www.linkedin.com/in/anne-pier-salverda-37ab7042/
+        target: _blank
     sidebar:
       style: "docked"
       background: "light"
       collapse-level: 1
       align: left
-      tools:
-        - icon: sliders
-          menu:
-            - text: "Settings"
-              icon: gear
-            - text: "Profile"
-              icon: person
-        - icon: question-circle
-          href: "#"
+      # tools:
+      #   - icon: sliders
+      #     menu:
+      #       - text: "Settings"
+      #         icon: gear
+      #       - text: "Profile"
+      #         icon: person
+      #   - icon: question-circle
+      #     href: "#"
 server: shiny
 ---
 
@@ -469,6 +471,7 @@ output$import_filename = renderText({
 })
 
 output$species_count_plot = renderGirafe({
+  
   plot = 
     selected_dat() %>% 
     count(submission_id, date) %>% 
@@ -481,6 +484,7 @@ output$species_count_plot = renderGirafe({
     ) %>% 
     ggplot(aes(x = date, y = n)) + 
     geom_point_interactive(
+      #      position = ggbeeswarm::position_quasirandom(width = 1),
       shape = 16,
       aes(
         tooltip = my_label,
@@ -491,19 +495,22 @@ output$species_count_plot = renderGirafe({
     ) +
     ylim(0, NA) +
     scale_x_date() +
+    theme_gray(base_size = 14) +
     theme(
       panel.grid = element_blank()
     ) +
     labs(
-      title = "",
+      title = "Total species reported by checklist",
+      subtitle = "Click on a data point to open the checklist in eBird",
       x = "",
       y = "Total species reported"
     )
   girafe(
     ggobj = plot, 
-    pointsize = 40,
+    pointsize = 60,
     width_svg = (0.98 * (input$pltChange$width - 300) / input$pltChange$dpi),
-    height_svg = (0.42 * (input$pltChange$height - 100) / input$pltChange$dpi)
+    height_svg = (0.75 * (input$pltChange$height - 100) / input$pltChange$dpi)
+    #    height_svg = (0.42 * (input$pltChange$height - 100) / input$pltChange$dpi)
   ) %>% 
     girafe_options(
       opts_sizing(rescale = FALSE),
@@ -590,8 +597,10 @@ output$data_preview = DT::renderDT({
       rownames = FALSE,
       options = list(
         dom = "ft",
-        scrollY = "200px",
-        pageLength = 999999
+        #        scrollY = "45vh",
+        scrollY = paste0((0.65 * (input$pltChange$height - 200)), "px"),
+        #        scrollY = "500px",
+        pageLength = 1000
       )
     )
 })
@@ -624,10 +633,10 @@ output$data_preview = DT::renderDT({
 #       #      scrollX = TRUE,
 #       #      autoWidth = TRUE
 #     )#,
-#     # caption = htmltools::tags$caption(
-#     #   style = 'caption-side: top; text-align: center; font-size: 16px; font-weight: bold;',
-#     #   paste('Data from', input$hotspot_sorting, 'filtered by', input$column, '=', input$filter_value)
-#     # )
+# caption = htmltools::tags$caption(
+#   style = 'caption-side: top; text-align: center; font-size: 16px; font-weight: bold;',
+#   paste('Data from', input$hotspot_sorting, 'filtered by', input$column, '=', input$filter_value)
+# )
 #   )
 # })
 
@@ -719,7 +728,6 @@ observeEvent(
 
 ```{r}
 #| title: "Filters"
-
 selectInput(
   "hotspot", 
   "Hotspot",
@@ -733,15 +741,21 @@ selectInput(
   choices = list("checklist count", "alphabetically")
 )
 
-hr()
+leafletOutput("hotspot_map", height = "200px")
 
-dateRangeInput("date_range", "Date range",
-               start  = "2001-01-01",
-               end    = "2010-12-31",
-               min    = "2001-01-01",
-               max    = "2012-12-21",
-               format = "mm/dd/yy",
-               separator = " - ")
+tags$style(".form-control, .input-group-addon {padding: 0px 0px 0px 0px !important;}")
+
+dateRangeInput(
+  "date_range", "Date range",
+  start  = "2001-01-01",
+  end    = "2010-12-31",
+  min    = "2001-01-01",
+  max    = "2012-12-21",
+  format = "mm/dd/yy",
+  weekstart = 1,
+  separator = "to",
+  startview = "month"
+)
 
 # sliderInput("dateRange", "Date Range:",
 #             min = as.Date("2025-01-01"),
@@ -766,41 +780,41 @@ dateRangeInput("date_range", "Date range",
 
 hr()
 
-leafletOutput("hotspot_map", height = "200px")
-
-hr()
-
-a(
-  "Download personal eBird data",
-  href = "https://ebird.org/downloadMyData",
-  target="_blank"
+span(
+  "1. ",
+  a(
+    "Download",
+    href = "https://ebird.org/downloadMyData",
+    target="_blank"
+  ),
+  " personal eBird data"
 )
 
-p()
-
-fileInput(
-  "upload",
-  "Import downloaded eBird data",
-  accept = ".csv",
-  multiple = FALSE,
-  placeholder = "",
-  width = "100%"
+tags$div(
+  style = "margin-bottom: -20px; /* Adjust this value as needed */",
+  fileInput(
+    "upload",
+    "2. Import downloaded eBird data",
+    accept = ".csv",
+    buttonLabel = "Import...",
+    multiple = FALSE,
+    placeholder = "",
+    width = "100%"
+  )
 )
-
 verbatimTextOutput("import_filename")
-
 verbatimTextOutput("imported_data_statistics")
-
 # div(
 #   h4("Dashboard Info"),
 #   p("Last updated: March 19, 2025")
 # )
 
 hr()
-
-p("Created by ", a("Anne Pier Salverda ", href = "mailto:salverda@yahoo.com?subject='Your eBird dashboard'"), bs_icon("feather"))
-
-
+p(
+  "Created by ",
+  a("Anne Pier Salverda ", href = "mailto:salverda@yahoo.com?subject='Your eBird dashboard'"),
+  bs_icon("feather")
+)
 ```
 
 # Hotspot {orientation="rows"}
@@ -894,11 +908,12 @@ layout_column_wrap(
 # )
 ```
 
-## Species plot {height=55%}
+## Tabs {height=89%, .tabset expandable=false overflow=hidden}
 
 ```{r}
-#| title: Click on a data point to open the checklist in eBird
+#| title: "Checklists"
 # https://stackoverflow.com/questions/65267602/can-a-ggiraph-interactive-plot-be-the-size-of-the-window-in-r-shiny
+#p("Click on a data point to open the checklist in eBird")
 tags$body(tags$div(id="ppitest", style="width:1in;visible:hidden;padding:0px"))
 tags$script('$(document).on("shiny:connected", function(e) {
                                     var w = window.innerWidth;
@@ -915,20 +930,23 @@ tags$script('$(document).on("shiny:connected", function(e) {
                                     Shiny.onInputChange("pltChange", obj);
                                 });
                             ')
+tags$script(HTML("
+$(document).on('shown.bs.tab', 'a[data-toggle=\"tab\"]', function (e) {
+    var w = $(window).width();
+    var h = $(window).height();
+    var d = document.getElementById(\"ppitest\").offsetWidth;
+    var obj = {width: w, height: h, dpi: d};
+    Shiny.onInputChange(\"pltChange\", obj);
+});
+"))
 girafeOutput("species_count_plot")
 ```
 
 ```{r}
-# #| title: "Map"
-# leafletOutput("hotspot_map")
-```
-
-## Species table {height=38%}
-
-```{r}
-##| title: "Observations"
-DT::dataTableOutput("data_preview")
-
+#| title: "Species"
+div(
+  DT::DTOutput("data_preview")
+)
 # gt(observations) %>%
 #   tab_header(
 #     title = "Key Observations"
