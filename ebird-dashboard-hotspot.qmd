@@ -509,8 +509,9 @@ output$species_count_plot = renderGirafe({
     ggobj = plot, 
     pointsize = 60,
     width_svg = (0.98 * (input$pltChange$width - 300) / input$pltChange$dpi),
-    height_svg = (0.75 * (input$pltChange$height - 100) / input$pltChange$dpi)
-    #    height_svg = (0.42 * (input$pltChange$height - 100) / input$pltChange$dpi)
+    height_svg = (0.88 * (input$pltChange$height - 95 - 80) / input$pltChange$dpi)
+    # width_svg = (0.98 * (input$pltChange$width - 300) / input$pltChange$dpi),
+    # height_svg = (0.75 * (input$pltChange$height - 100) / input$pltChange$dpi)
   ) %>% 
     girafe_options(
       opts_sizing(rescale = FALSE),
@@ -590,17 +591,21 @@ output$data_preview = DT::renderDT({
       "Common name" = common_name,
       "First seen" = first_seen,
       "Last seen" = last_seen,
-      "Percentage checklists" = perc_checklists
+      "% checklists" = perc_checklists
     ) %>%
+#     mutate(
+#       # used to display scrollable height, for trouble shooting
+#       height = input$pltChange$height,
+#       scrolly = paste0(0.65 * (input$pltChange$height - 95 - 80), "px")
+# ) %>%
     formattable() %>% 
     as.datatable(
       rownames = FALSE,
       options = list(
         dom = "ft",
-        #        scrollY = "45vh",
-        scrollY = paste0((0.65 * (input$pltChange$height - 200)), "px"),
-        #        scrollY = "500px",
-        pageLength = 1000
+        scrollY = ((input$pltChange$height - 122) * .88) - 148,
+#        scrollY = paste0(0.65 * (input$pltChange$height - 95 - 80), "px"),
+        pageLength = 10000
       )
     )
 })
@@ -722,12 +727,18 @@ observeEvent(
       max = latest_date()
     )
   })
+
+output$width = renderText({paste0("width: ", input$pltChange$width)})
+output$height = renderText({paste0("height: ", input$pltChange$height)})
 ```
 
 ## Sidebar {.sidebar width="225px"}
 
 ```{r}
 #| title: "Filters"
+verbatimTextOutput("width")
+verbatimTextOutput("height")
+
 selectInput(
   "hotspot", 
   "Hotspot",
@@ -819,7 +830,7 @@ p(
 
 # Hotspot {orientation="rows"}
 
-## Value boxes {height=11%}
+## Value boxes {height=12%}
 
 ```{r}
 #tags$body(tags$style(HTML('.bslib-value-box .value-box-title {font-size: 0.5rem;}')))
@@ -908,7 +919,7 @@ layout_column_wrap(
 # )
 ```
 
-## Tabs {height=89%, .tabset expandable=false overflow=hidden}
+## Tabs {height=88%, .tabset expandable=false overflow=hidden}
 
 ```{r}
 #| title: "Checklists"
