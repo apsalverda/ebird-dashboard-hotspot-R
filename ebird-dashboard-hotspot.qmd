@@ -7,6 +7,12 @@ format:
     theme: cosmo
     css: style.css
     nav-buttons:
+      - icon: envelope-at
+        href: mailto:salverda@yahoo.com?subject=Your eBird dashboard
+        target: _blank
+      - icon: mortarboard-fill
+        href: https://scholar.google.com/citations?user=dnlnAJQAAAAJ
+        target: _blank
       - icon: github
         href: https://github.com/apsalverda
         target: _blank
@@ -48,25 +54,31 @@ ebird_green = "#70c687"
 ebird_yellow = "#FFD800"
 ebird_red = "#DA1C13"
 light_gray = "#E5E5E5"
+spring_color = "#70c687"
+summer_color = "#FFD800"
+fall_color = "#FF9900"
+winter_color = "#56B3FA"
 
-ordinal_date_suffix = function(date_str, year = TRUE, markdown_subscript = FALSE) {
-  date_obj = as.Date(date_str, "%Y-%m-%d")
-  day_suffix = c("st", "nd", "rd", rep("th", 17), "st", "nd", "rd", rep("th", 7), "st")
-  if (markdown_subscript == TRUE){ day_suffix = paste0("^", day_suffix, "^") }
-  formatted_date = paste0(
-    month(date_obj, label = TRUE, abbr = FALSE),
-    " ",
-    day(date_obj), 
-    day_suffix[day(date_obj)],
-    ifelse(year == TRUE, paste0(
+ordinal_date_suffix = Vectorize(
+  function(date_str, year = TRUE, markdown_subscript = FALSE) {
+    date_obj = as.Date(date_str, "%Y-%m-%d")
+    day_suffix = c("st", "nd", "rd", rep("th", 17), "st", "nd", "rd", rep("th", 7), "st")
+    if (markdown_subscript == TRUE){ day_suffix = paste0("^", day_suffix, "^") }
+    formatted_date = paste0(
+      month(date_obj, label = TRUE, abbr = FALSE),
       " ",
-      year(date_obj)
-    ),
-    ""
+      day(date_obj), 
+      day_suffix[day(date_obj)],
+      ifelse(year == TRUE, paste0(
+        " ",
+        year(date_obj)
+      ),
+      ""
+      )
     )
-  )
-  return(formatted_date)
-}
+    return(formatted_date)
+  }
+)
 # # read ebird data
 # ebird_csv = read_csv(
 #   "MyEBirdData.csv",
@@ -137,12 +149,18 @@ ordinal_date_suffix = function(date_str, year = TRUE, markdown_subscript = FALSE
 
 ```{r}
 #| context: server
+
+react_delay = 1
+change_slider = reactiveVal(Sys.time())
+change_daterange = reactiveVal(Sys.time())
 reactive_hotspot_values = reactiveVal(list(NULL))
 earliest_date = reactiveVal()
 latest_date = reactiveVal()
 n_rows_data = reactiveVal()
 n_checklists = reactiveVal()
 n_species = reactiveVal()
+testje = reactiveVal(0)
+import_counter = reactiveVal(0)
 
 ebird_dat = reactiveVal({
   read_csv("MyEBirdData.csv",
@@ -196,37 +214,6 @@ ebird_dat = reactiveVal({
 
 imported_dat = reactive({
   req(input$upload)
-  # if (is.null(input$upload)){
-  #   imported_dat =
-  #     read_csv("MyEBirdData.csv",
-  #              col_types = cols(
-  #                `Submission ID` = col_character(),
-  #                `Common Name` = col_character(),
-  #                `Scientific Name` = col_character(),
-  #                `Taxonomic Order` = col_double(),
-  #                Count = col_character(), #!
-  #                `State/Province` = col_character(),
-  #                County = col_character(),
-  #                `Location ID` = col_character(),
-  #                Location = col_character(),
-  #                Latitude = col_double(),
-  #                Longitude = col_double(),
-  #                Date = col_date(format = ""),
-  #                Time = col_time(format = ""),
-  #                Protocol = col_character(),
-  #                `Duration (Min)` = col_double(),
-  #                `All Obs Reported` = col_double(),
-  #                `Distance Traveled (km)` = col_double(),
-  #                `Area Covered (ha)` = col_logical(),
-  #                `Number of Observers` = col_double(),
-  #                `Breeding Code` = col_character(),
-  #                `Observation Details` = col_character(),
-  #                `Checklist Comments` = col_character(),
-  #                `ML Catalog Numbers` = col_character()
-  #              ),
-  #              na = c("")
-  #     )
-  # } else {
   imported_dat =
     read_csv(input$upload$datapath,
              col_types = cols(
@@ -277,92 +264,115 @@ imported_dat = reactive({
     )
 })
 
-observe({
+
+observeEvent(input$upload, {
   # triggered in response to the user uploading a file
-  if (!is.null(input$upload)) {
-    imported_dat =
-      read_csv(input$upload$datapath,
-               col_types = cols(
-                 `Submission ID` = col_character(),
-                 `Common Name` = col_character(),
-                 `Scientific Name` = col_character(),
-                 `Taxonomic Order` = col_double(),
-                 Count = col_character(), #!
-                 `State/Province` = col_character(),
-                 County = col_character(),
-                 `Location ID` = col_character(),
-                 Location = col_character(),
-                 Latitude = col_double(),
-                 Longitude = col_double(),
-                 Date = col_date(format = ""),
-                 Time = col_time(format = ""),
-                 Protocol = col_character(),
-                 `Duration (Min)` = col_double(),
-                 `All Obs Reported` = col_double(),
-                 `Distance Traveled (km)` = col_double(),
-                 `Area Covered (ha)` = col_logical(),
-                 `Number of Observers` = col_double(),
-                 `Breeding Code` = col_character(),
-                 `Observation Details` = col_character(),
-                 `Checklist Comments` = col_character(),
-                 `ML Catalog Numbers` = col_character()
-               ),
-               na = c("")
-      ) %>% 
-      janitor::clean_names() %>%
-      select(submission_id, date, everything()) %>%
-      arrange(date, time) %>%
-      mutate(
-        year = factor(year(date)),
-        month = month(date),
-        day_of_year = yday(date),
-        us_season = case_when(
-          month < 3 | month == 12~ "winter",
-          month < 6 ~ "spring",
-          month < 9 ~ "summer",
-          month < 12 ~ "fall",
-          TRUE ~ NA
-        ),
-        us_season = factor(us_season, levels = c("spring", "summer", "fall", "winter")),
-        month = factor(month(date, label = TRUE)),
-        # convert "X" to -1 so count can be stored as an integer
-        count = as.numeric(ifelse(count == "X", "-1", count))
-      )
-    ebird_dat(imported_dat)
-    earliest_date(min(imported_dat$date))
-    latest_date(max(imported_dat$date))
-    n_rows_data(nrow(imported_dat))
-    n_checklists(
-      imported_dat %>%
-        #        filter(protocol != "eBird - Casual Observation") %>%
-        distinct(submission_id) %>%
-        nrow()
+  import_counter(import_counter() + 1)
+  imported_dat =
+    read_csv(input$upload$datapath,
+             col_types = cols(
+               `Submission ID` = col_character(),
+               `Common Name` = col_character(),
+               `Scientific Name` = col_character(),
+               `Taxonomic Order` = col_double(),
+               Count = col_character(), #!
+               `State/Province` = col_character(),
+               County = col_character(),
+               `Location ID` = col_character(),
+               Location = col_character(),
+               Latitude = col_double(),
+               Longitude = col_double(),
+               Date = col_date(format = ""),
+               Time = col_time(format = ""),
+               Protocol = col_character(),
+               `Duration (Min)` = col_double(),
+               `All Obs Reported` = col_double(),
+               `Distance Traveled (km)` = col_double(),
+               `Area Covered (ha)` = col_logical(),
+               `Number of Observers` = col_double(),
+               `Breeding Code` = col_character(),
+               `Observation Details` = col_character(),
+               `Checklist Comments` = col_character(),
+               `ML Catalog Numbers` = col_character()
+             ),
+             na = c("")
+    ) %>% 
+    janitor::clean_names() %>%
+    select(submission_id, date, everything()) %>%
+    arrange(date, time) %>%
+    mutate(
+      year = factor(year(date)),
+      month = month(date),
+      day_of_year = yday(date),
+      us_season = case_when(
+        month < 3 | month == 12~ "winter",
+        month < 6 ~ "spring",
+        month < 9 ~ "summer",
+        month < 12 ~ "fall",
+        TRUE ~ NA
+      ),
+      us_season = factor(us_season, levels = c("spring", "summer", "fall", "winter")),
+      month = factor(month(date, label = TRUE)),
+      # convert "X" to -1 so count can be stored as an integer
+      count = as.numeric(ifelse(count == "X", "-1", count))
     )
-    n_species(
-      imported_dat %>% 
-        #        filter(protocol != "eBird - Casual Observation") %>%
-        distinct(common_name) %>%
-        nrow())
-  }
+  ebird_dat(imported_dat)
+  earliest_date(min(imported_dat$date))
+  latest_date(max(imported_dat$date))
+  updateSliderInput(
+    session,
+    "date_range_slider",
+    min = earliest_date(),
+    max = latest_date(),
+    value = c(earliest_date(), latest_date()),
+    timeFormat = "%b %Y"
+  )
+  # NOTE: the data range input object gets updated automatically
+  # updateDateRangeInput(
+  #   session,
+  #   "date_range",
+  #   start = earliest_date(),
+  #   end = latest_date(),
+  #   min = earliest_date(),
+  #   max = latest_date()
+  # )
+  n_rows_data(nrow(imported_dat))
+  n_checklists(
+    imported_dat %>%
+      #        filter(protocol != "eBird - Casual Observation") %>%
+      distinct(submission_id) %>%
+      nrow()
+  )
+  n_species(
+    imported_dat %>% 
+      #        filter(protocol != "eBird - Casual Observation") %>%
+      distinct(common_name) %>%
+      nrow())
 })
 
 selected_dat = reactive({
   req(input$hotspot)
-  selected_dat = 
-    ebird_dat() %>% 
-    filter(
-      location == input$hotspot
-    )
-  earliest_date(min(selected_dat$date))
-  latest_date(max(selected_dat$date))
+  if (input$hotspot == "All"){
+    # user has selected all hotspots
+    my_selected_dat = ebird_dat()
+  } else {
+    # user has selected a hotspot
+    my_selected_dat = 
+      ebird_dat() %>% 
+      filter(
+        location == input$hotspot
+      )
+  }
+  earliest_date(min(my_selected_dat$date))
+  latest_date(max(my_selected_dat$date))
   #  n_rows_data(nrow(selected_dat))
   #  n_checklists(selected_dat %>% distinct(submission_id) %>% nrow())
-  selected_dat = selected_dat %>%
+  my_selected_dat = my_selected_dat %>%
     filter(
       date >= input$date_range[1],
       date <= input$date_range[2]
     )
-  return(selected_dat)
+  return(my_selected_dat)
 })
 
 total_species = reactive({
@@ -448,7 +458,7 @@ output$imported_data_statistics = renderText({
     is.null(input$upload$name),
     "",
     paste0(
-      " ",
+      "\nImported: \n ",
       n_rows_data(),
       " observations\n ",
       n_checklists(),
@@ -472,10 +482,9 @@ output$import_filename = renderText({
 })
 
 output$species_count_plot = renderGirafe({
-  
   plot = 
     selected_dat() %>% 
-    count(submission_id, date) %>% 
+    count(submission_id, date, us_season) %>% 
     mutate(
       my_label = paste(
         n,
@@ -483,7 +492,7 @@ output$species_count_plot = renderGirafe({
         ordinal_date_suffix(date)
       )
     ) %>% 
-    ggplot(aes(x = date, y = n)) + 
+    ggplot(aes(x = date, y = n, color = us_season)) + 
     geom_point_interactive(
       #      position = ggbeeswarm::position_quasirandom(width = 1),
       shape = 16,
@@ -495,17 +504,48 @@ output$species_count_plot = renderGirafe({
       )
     ) +
     ylim(0, NA) +
+    scale_color_manual(
+      values = c(spring_color, summer_color, fall_color, winter_color),
+      guide = "none"
+    ) +
     scale_x_date() +
+    scale_y_continuous(expand = expansion(add = c(1, 1))) +
     theme_gray(base_size = 14) +
     theme(
-      panel.grid = element_blank()
+      panel.grid = element_blank(),
+      panel.background = element_blank()
     ) +
     labs(
-      title = "Total species reported by checklist",
+      # title = "Total species reported by checklist",
       subtitle = "Click on a data point to open the checklist in eBird",
       x = "",
       y = "Total species reported"
     )
+  if(input$season_coloring =="none"){
+    plot = 
+      plot +
+      scale_color_manual(
+        values = c("#636363", "#636363", "#636363", "#636363"),
+        guide = "none"
+      )
+  }
+  if(input$season_coloring =="southern hemisphere"){
+    plot = 
+      plot +
+      scale_color_manual(
+        values = c(fall_color, winter_color, spring_color, summer_color),
+        guide = "none"
+      )
+  }
+  # avoid fractions on the Y axis
+  y_axis_breaks = layer_scales(plot)$y$break_positions()
+  y_axis_breaks= y_axis_breaks[!is.na(y_axis_breaks)]
+  if (length(y_axis_breaks[y_axis_breaks != round(y_axis_breaks)]) > 0){
+    y_axis_breaks = y_axis_breaks[y_axis_breaks == round(y_axis_breaks)]
+    plot = 
+      plot +
+      scale_y_continuous(breaks = y_axis_breaks)
+  }
   girafe(
     ggobj = plot, 
     pointsize = 60,
@@ -518,16 +558,14 @@ output$species_count_plot = renderGirafe({
       opts_sizing(rescale = FALSE),
       opts_toolbar(
         fixed = TRUE,
-        #    position = "bottomright",
         pngname = "ebird-dashboard.png",
         hidden = c("selection", "saveaspng")
       ),
       opts_tooltip(
         use_fill = TRUE,
-        #    opacity = .65,
+        opacity = .7,
         offx = 10,
         offy = 0
-        #    use_fill = TRUE,
         #    css = "color:blue; background-color:red, fill-opacity:.5;"
         #    tooltip_fill = "white"
       ),
@@ -599,8 +637,8 @@ output$data_preview = DT::renderDT({
     arrange(desc(perc_checklists)) %>% 
     rename(
       "common name" = common_name,
-      "first seen" = first_seen,
-      "last seen" = last_seen,
+      "first" = first_seen,
+      "last" = last_seen,
       "% checklists" = perc_checklists
     ) %>%
     #     mutate(
@@ -674,12 +712,47 @@ output$hotspot_map = renderLeaflet({
 }
 )
 
-# observeEvent(
-#   c(input$date_range),
-#   {
-#     @
-#   }
-# )
+# observeEvent(import_counter(), {
+#   testje(testje() + 1)
+# })
+
+observeEvent(c(earliest_date(), latest_date()), {
+  testje(testje() + 1)
+  updateSliderInput(
+    session,
+    "date_range_slider",
+    min = earliest_date(),
+    max = latest_date(),
+    value = c(earliest_date(), latest_date()),
+    timeFormat = "%b %Y"
+  )
+}
+)
+
+observeEvent(c(input$date_range_slider, input$ebird_dat, input$selected_dat), {
+  if (difftime(Sys.time(), change_slider()) > react_delay) {
+    change_daterange(Sys.time())
+    updateDateRangeInput(
+      session,
+      "date_range",
+      start = input$date_range_slider[[1]],
+      end = input$date_range_slider[[2]]
+    )
+  }
+}
+)
+observeEvent(c(input$date_range, input$ebird_dat, input$selected_dat), {
+  if (difftime(Sys.time(), change_daterange()) > react_delay) {
+    change_slider(Sys.time())
+    updateSliderInput(
+      session,
+      "date_range_slider",
+      value = c(input$date_range[[1]],
+                input$date_range[[2]]),
+      timeFormat = "%b %Y"
+    )
+  }
+})
 
 observeEvent(
   c(input$hotspot_sorting, input$upload),
@@ -700,7 +773,7 @@ observeEvent(
           hotspot_list %>% 
             filter(str_detect(location, "^[0-9]"))
         )
-      hotspot_list = hotspot_list %>% pull()
+      hotspot_list = c("All", hotspot_list %>% pull())
     } else
     {
       # arrange by number of checklists reported
@@ -709,12 +782,11 @@ observeEvent(
         distinct(location, submission_id) %>% 
         count(location, sort = TRUE) %>%
         pull(location)
+      hotspot_list = c("All", hotspot_list)
     }
     reactive_hotspot_values(hotspot_list)
     earliest_date(min(ebird_dat()$date))
     latest_date(max(ebird_dat()$date))
-    #    n_rows_data(nrow(ebird_dat()))
-    #    n_checklists(ebird_dat() %>% distinct(submission_id) %>% nrow())
     updateSelectInput(
       session,
       "hotspot",
@@ -723,10 +795,11 @@ observeEvent(
     )
     updateSliderInput(
       session,
-      "dateRange",
+      "date_range_slider",
       min = earliest_date(),
       max = latest_date(),
-      value = c(earliest_date(), latest_date())
+      value = c(earliest_date(), latest_date()),
+      timeFormat = "%b %Y"
     )
     updateDateRangeInput(
       session,
@@ -739,6 +812,14 @@ observeEvent(
   })
 
 # for troubleshooting
+output$testje = renderText({
+  paste0(
+    "testje: ", testje(), 
+    "\nearliest date: ", earliest_date(),
+    "\nlatest date: ", latest_date(),
+    "\nimport counter: ", import_counter()
+  )}
+)
 # output$width = renderText({paste0("width: ", input$pltChange$width)})
 # output$height = renderText({paste0("height: ", input$pltChange$height)})
 ```
@@ -751,7 +832,33 @@ observeEvent(
 # verbatimTextOutput("width")
 # verbatimTextOutput("height")
 
-leafletOutput("hotspot_map", height = "200px")
+
+
+tags$style(type = "text/css", HTML(
+  ".irs-bar { display: none }",
+  ".irs-bar-edge { display: none }",
+  ".irs-single { color: black; background: transparent }",
+  ".irs-from { color: black; background: transparent }",
+  ".irs-to { color: black; background: transparent }",
+  ".js-irs-0 .irs-slider { background: #007FA3; width: 12px; height: 12px; top: 23px }",
+  ".js-irs-0 .irs-slider:hover { background: #007FA3; width: 12px; height: 12px; top: 23px }"))
+
+p(
+  a(bs_icon("envelope-at"), href = "mailto:salverda@yahoo.com?subject=Your eBird dashboard"),
+  " Anne Pier Salverda "
+  #  bs_icon("feather")
+)
+
+verbatimTextOutput("testje")
+
+div(
+  style = "margin-bottom: 15px",
+  leafletOutput(
+    "hotspot_map",
+    height = "200", 
+    width = "200"
+  )
+)
 
 selectInput(
   "hotspot", 
@@ -763,21 +870,47 @@ selectInput(
 selectInput(
   "hotspot_sorting", 
   "Hotspot list sorting",
-  choices = list("checklist count", "alphabetically")
+  choices = list("alphabetically", "checklist count"),
+  selected = "checklist count"
 )
 
-tags$style(".form-control, .input-group-addon {padding: 0px 0px 0px 0px !important;}")
+selectInput(
+  "season_coloring", 
+  "Season colors",
+  choices = list("northern hemisphere", "southern hemisphere", "none"),
+  selected = "northern hemisphere"
+)
 
-dateRangeInput(
-  "date_range", "Date range",
-  start  = "2001-01-01",
-  end    = "2010-12-31",
-  min    = "2001-01-01",
-  max    = "2012-12-21",
-  format = "mm/dd/yy",
-  weekstart = 1,
-  separator = "to",
-  startview = "month"
+div(
+  style = "display: inline-block; padding-top: 0px; margin-top: 0px; margin-left: 15px; margin-right: 15px; font-size: 15px; width: 165px",
+  div(style = "display: none;", "Slider"),
+  sliderInput(
+    "date_range_slider",
+    "",
+    min = Sys.Date() - 90,
+    max = Sys.Date(),
+    value =  c(Sys.Date() - 30, Sys.Date()),
+    step = 30,
+    ticks = FALSE,
+    timeFormat = "%b %Y"
+  )
+)
+
+div(
+  tags$style(".form-control, .input-group-addon {padding: 0px 0px 0px 0px !important;}"),
+  style = "display: inline-block; padding-top: 0px; margin-bottom: 0px; margin-top: -20px",
+  dateRangeInput(
+    "date_range", 
+    "",
+    start  = "2001-01-01",
+    end    = "2010-12-31",
+    min    = "2001-01-01",
+    max    = "2012-12-21",
+    format = "mm/dd/yy",
+    weekstart = 1,
+    separator = "to",
+    startview = "month"
+  )
 )
 
 # sliderInput("dateRange", "Date Range:",
@@ -786,24 +919,8 @@ dateRangeInput(
 #             value = c(as.Date("2025-01-01"), as.Date("2025-03-01")),
 #             timeFormat = "%b %Y")
 
-# selectInput("category", "Category:",
-#             c("All Categories" = "all",
-#               "Category A" = "a",
-#               "Category B" = "b",
-#               "Category C" = "c"))
-# 
-# checkboxGroupInput("metrics", "Metrics to Display:",
-#                    c("Value 1" = "value1",
-#                      "Value 2" = "value2",
-#                      "Value 3" = "value3"),
-#                    selected = c("value1", "value2", "value3"))
-
-# actionButton("updateBtn", "Update Dashboard", 
-#              class = "btn-primary w-100 mb-3")
-
-hr()
-
-span(
+div(
+  style = "margin-top: 15px",
   "1. ",
   a(
     "Download",
@@ -814,7 +931,7 @@ span(
 )
 
 tags$div(
-  style = "margin-bottom: -20px; /* Adjust this value as needed */",
+  style = "margin-bottom: -10px; /* Adjust this value as needed */",
   fileInput(
     "upload",
     "2. Import downloaded eBird data",
@@ -825,19 +942,10 @@ tags$div(
     width = "100%"
   )
 )
-verbatimTextOutput("import_filename")
+#verbatimTextOutput("import_filename")
 verbatimTextOutput("imported_data_statistics")
-# div(
-#   h4("Dashboard Info"),
-#   p("Last updated: March 19, 2025")
-# )
 
-hr()
-p(
-  "Created by ",
-  a("Anne Pier Salverda ", href = "mailto:salverda@yahoo.com?subject='Your eBird dashboard'"),
-  bs_icon("feather")
-)
+#hr()
 ```
 
 # Hotspot {orientation="rows"}
@@ -989,3 +1097,4 @@ div(
 #     )
 #   )
 ```
+
