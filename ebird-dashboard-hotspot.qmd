@@ -16,8 +16,8 @@ format:
     sidebar:
       style: "docked"
       background: "light"
-      collapse-level: 1
-      align: left
+      collapse: false
+#      collapse-level: 1
       # tools:
       #   - icon: sliders
       #     menu:
@@ -47,6 +47,7 @@ original_ebird_green = "#2F7742"
 ebird_green = "#70c687"
 ebird_yellow = "#FFD800"
 ebird_red = "#DA1C13"
+light_gray = "#E5E5E5"
 
 ordinal_date_suffix = function(date_str, year = TRUE, markdown_subscript = FALSE) {
   date_obj = as.Date(date_str, "%Y-%m-%d")
@@ -537,23 +538,31 @@ output$species_count_plot = renderGirafe({
     )
 })
 
+my_percent = function(proportion){
+  percentage = proportion * 100
+  formatted_percentage = sprintf("%05.1f%%", percentage)
+  return(formatted_percentage)
+}
+
 bg = function(start, end, color, ...) {
   paste(
     "linear-gradient(90deg,transparent ",
-    percent(start),
+    my_percent(start),
     ", ",
     color, 
-    percent(start), 
+    my_percent(start), 
     ", ",
     color, 
-    percent(end),
-    ", transparent", percent(end),
+    my_percent(end),
+    ", ",
+    light_gray,
+    my_percent(end),
     ")"
   )
 } 
 
 xnormalize = function(x, y){
-  x = y + (x / 100) / 2
+  y + (x / 100) * (1 - y)
 }
 
 my_color_bar = function(...){
@@ -563,7 +572,7 @@ my_color_bar = function(...){
       display = "inline-block",
       "text-align" = "left",
       "width" = "100%",
-      "background" = bg(.2, xnormalize(x, .2), ebird_green)
+      "background" = bg(0, xnormalize(x, 0), ebird_green)
     )
   )
 }
@@ -587,24 +596,25 @@ output$data_preview = DT::renderDT({
     mutate(
       perc_checklists = my_color_bar()(perc_checklists)
     ) %>% 
+    arrange(desc(perc_checklists)) %>% 
     rename(
-      "Common name" = common_name,
-      "First seen" = first_seen,
-      "Last seen" = last_seen,
+      "common name" = common_name,
+      "first seen" = first_seen,
+      "last seen" = last_seen,
       "% checklists" = perc_checklists
     ) %>%
-#     mutate(
-#       # used to display scrollable height, for trouble shooting
-#       height = input$pltChange$height,
-#       scrolly = paste0(0.65 * (input$pltChange$height - 95 - 80), "px")
-# ) %>%
+    #     mutate(
+    #       # used to display scrollable height, for trouble shooting
+    #       height = input$pltChange$height,
+    #       scrolly = paste0(0.65 * (input$pltChange$height - 95 - 80), "px")
+    # ) %>%
     formattable() %>% 
     as.datatable(
       rownames = FALSE,
       options = list(
         dom = "ft",
         scrollY = ((input$pltChange$height - 122) * .88) - 148,
-#        scrollY = paste0(0.65 * (input$pltChange$height - 95 - 80), "px"),
+        #        scrollY = paste0(0.65 * (input$pltChange$height - 95 - 80), "px"),
         pageLength = 10000
       )
     )
@@ -728,16 +738,20 @@ observeEvent(
     )
   })
 
-output$width = renderText({paste0("width: ", input$pltChange$width)})
-output$height = renderText({paste0("height: ", input$pltChange$height)})
+# for troubleshooting
+# output$width = renderText({paste0("width: ", input$pltChange$width)})
+# output$height = renderText({paste0("height: ", input$pltChange$height)})
 ```
 
-## Sidebar {.sidebar width="225px"}
+## Sidebar {.sidebar width=225}
 
 ```{r}
 #| title: "Filters"
-verbatimTextOutput("width")
-verbatimTextOutput("height")
+# for troubleshooting
+# verbatimTextOutput("width")
+# verbatimTextOutput("height")
+
+leafletOutput("hotspot_map", height = "200px")
 
 selectInput(
   "hotspot", 
@@ -751,8 +765,6 @@ selectInput(
   "Hotspot list sorting",
   choices = list("checklist count", "alphabetically")
 )
-
-leafletOutput("hotspot_map", height = "200px")
 
 tags$style(".form-control, .input-group-addon {padding: 0px 0px 0px 0px !important;}")
 
