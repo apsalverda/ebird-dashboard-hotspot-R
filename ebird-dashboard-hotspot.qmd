@@ -14,7 +14,7 @@ format:
         href: https://scholar.google.com/citations?user=dnlnAJQAAAAJ
         target: _blank
       - icon: github
-        href: https://github.com/apsalverda
+        href: https://github.com/apsalverda/ebird-dashboard-hotspot
         target: _blank
       - icon: linkedin
         href: https://www.linkedin.com/in/anne-pier-salverda-37ab7042/
@@ -151,6 +151,7 @@ ordinal_date_suffix = Vectorize(
 #| context: server
 
 react_delay = 1
+
 change_slider = reactiveVal(Sys.time())
 change_daterange = reactiveVal(Sys.time())
 reactive_hotspot_values = reactiveVal(list(NULL))
@@ -161,6 +162,9 @@ n_checklists = reactiveVal()
 n_species = reactiveVal()
 testje = reactiveVal(0)
 import_counter = reactiveVal(0)
+hotspot_latitude = reactiveVal(0)
+hotspot_longitude = reactiveVal(0)
+hotspot_name = reactiveVal("")
 
 ebird_dat = reactiveVal({
   read_csv("MyEBirdData.csv",
@@ -372,6 +376,12 @@ selected_dat = reactive({
       date >= input$date_range[1],
       date <= input$date_range[2]
     )
+  top_lat_lng =
+    my_selected_dat %>%
+    distinct(location, latitude, longitude)
+  hotspot_latitude(top_lat_lng$latitude)
+  hotspot_longitude(top_lat_lng$longitude)
+  hotspot_name(top_lat_lng$location)
   return(my_selected_dat)
 })
 
@@ -504,10 +514,6 @@ output$species_count_plot = renderGirafe({
       )
     ) +
     ylim(0, NA) +
-    scale_color_manual(
-      values = c(spring_color, summer_color, fall_color, winter_color),
-      guide = "none"
-    ) +
     scale_x_date() +
     scale_y_continuous(expand = expansion(add = c(1, 1))) +
     theme_gray(base_size = 14) +
@@ -525,17 +531,26 @@ output$species_count_plot = renderGirafe({
     plot = 
       plot +
       scale_color_manual(
-        values = c("#636363", "#636363", "#636363", "#636363"),
+        # 636363
+        values = c("#707070", "#707070", "#707070", "#707070"),
         guide = "none"
       )
-  }
-  if(input$season_coloring =="southern hemisphere"){
-    plot = 
-      plot +
-      scale_color_manual(
-        values = c(fall_color, winter_color, spring_color, summer_color),
-        guide = "none"
-      )
+  } else {
+    if(input$season_coloring =="southern hemisphere"){
+      plot = 
+        plot +
+        scale_color_manual(
+          values = c(fall_color, winter_color, spring_color, summer_color),
+          guide = "none"
+        )
+    } else {
+      plot = 
+        plot +
+        scale_color_manual(
+          values = c(spring_color, summer_color, fall_color, winter_color),
+          guide = "none"
+        )
+    }
   }
   # avoid fractions on the Y axis
   y_axis_breaks = layer_scales(plot)$y$break_positions()
@@ -636,7 +651,7 @@ output$data_preview = DT::renderDT({
     ) %>% 
     arrange(desc(perc_checklists)) %>% 
     rename(
-      "common name" = common_name,
+      "species" = common_name,
       "first" = first_seen,
       "last" = last_seen,
       "% checklists" = perc_checklists
@@ -694,20 +709,18 @@ output$data_preview = DT::renderDT({
 # })
 
 output$hotspot_map = renderLeaflet({
-  top_location_info =
-    selected_dat() %>% 
-    distinct(location, latitude, longitude)
   leaflet() %>%
     addTiles(
       urlTemplate = "https://mts1.google.com/vt/lyrs=s&hl=en&src=app&x={x}&y={y}&z={z}&s=G",
       attribution = "Google"
     ) %>%
-    # addControl(position = "topright") %>% 
-    # addTiles() %>%  # Add default OpenStreetMap map tiles
     addMarkers(
-      lng = top_location_info$longitude, 
-      lat = top_location_info$latitude, 
-      popup = top_location_info$location
+      lng = hotspot_longitude(), 
+      lat = hotspot_latitude(), 
+      popup = hotspot_name()
+      # lng = top_location_info$longitude, 
+      # lat = top_location_info$latitude, 
+      # popup = top_location_info$location
     )
 }
 )
@@ -811,7 +824,7 @@ observeEvent(
     )
   })
 
-# for troubleshooting
+# for trouble shooting
 output$testje = renderText({
   paste0(
     "testje: ", testje(), 
@@ -832,8 +845,6 @@ output$testje = renderText({
 # verbatimTextOutput("width")
 # verbatimTextOutput("height")
 
-
-
 tags$style(type = "text/css", HTML(
   ".irs-bar { display: none }",
   ".irs-bar-edge { display: none }",
@@ -843,16 +854,12 @@ tags$style(type = "text/css", HTML(
   ".js-irs-0 .irs-slider { background: #007FA3; width: 12px; height: 12px; top: 23px }",
   ".js-irs-0 .irs-slider:hover { background: #007FA3; width: 12px; height: 12px; top: 23px }"))
 
-p(
-  a(bs_icon("envelope-at"), href = "mailto:salverda@yahoo.com?subject=Your eBird dashboard"),
-  " Anne Pier Salverda "
-  #  bs_icon("feather")
-)
-
-verbatimTextOutput("testje")
+# for troubleshooting
+#verbatimTextOutput("testje")
 
 div(
-  style = "margin-bottom: 15px",
+  # top margin to accommodate sidebar close symbol
+  style = "margin-bottom: 15px; margin-top: 20px",
   leafletOutput(
     "hotspot_map",
     height = "200", 
