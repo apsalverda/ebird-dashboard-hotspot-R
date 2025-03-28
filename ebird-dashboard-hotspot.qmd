@@ -7,7 +7,7 @@ format:
     theme: cosmo
     css: style.css
     nav-buttons:
-      - icon: envelope-at
+      - icon: envelope-at-fill
         href: mailto:salverda@yahoo.com?subject=Your eBird dashboard
         target: _blank
       - icon: mortarboard-fill
@@ -23,16 +23,6 @@ format:
       style: "docked"
       background: "light"
       collapse: false
-#      collapse-level: 1
-      # tools:
-      #   - icon: sliders
-      #     menu:
-      #       - text: "Settings"
-      #         icon: gear
-      #       - text: "Profile"
-      #         icon: person
-      #   - icon: question-circle
-      #     href: "#"
 server: shiny
 ---
 
@@ -59,92 +49,7 @@ summer_color = "#FFD800"
 fall_color = "#FF9900"
 winter_color = "#56B3FA"
 
-ordinal_date_suffix = Vectorize(
-  function(date_str, year = TRUE, markdown_subscript = FALSE) {
-    date_obj = as.Date(date_str, "%Y-%m-%d")
-    day_suffix = c("st", "nd", "rd", rep("th", 17), "st", "nd", "rd", rep("th", 7), "st")
-    if (markdown_subscript == TRUE){ day_suffix = paste0("^", day_suffix, "^") }
-    formatted_date = paste0(
-      month(date_obj, label = TRUE, abbr = FALSE),
-      " ",
-      day(date_obj), 
-      day_suffix[day(date_obj)],
-      ifelse(year == TRUE, paste0(
-        " ",
-        year(date_obj)
-      ),
-      ""
-      )
-    )
-    return(formatted_date)
-  }
-)
-# # read ebird data
-# ebird_csv = read_csv(
-#   "MyEBirdData.csv",
-#   col_types = cols(
-#     `Submission ID` = col_character(),
-#     `Common Name` = col_character(),
-#     `Scientific Name` = col_character(),
-#     `Taxonomic Order` = col_double(),
-#     Count = col_character(), #!
-#     `State/Province` = col_character(),
-#     County = col_character(),
-#     `Location ID` = col_character(),
-#     Location = col_character(),
-#     Latitude = col_double(),
-#     Longitude = col_double(),
-#     Date = col_date(format = ""),
-#     Time = col_time(format = ""),
-#     Protocol = col_character(),
-#     `Duration (Min)` = col_double(),
-#     `All Obs Reported` = col_double(),
-#     `Distance Traveled (km)` = col_double(),
-#     `Area Covered (ha)` = col_logical(),
-#     `Number of Observers` = col_double(),
-#     `Breeding Code` = col_character(),
-#     `Observation Details` = col_character(),
-#     `Checklist Comments` = col_character(),
-#     `ML Catalog Numbers` = col_character()
-#   ),
-#   na = c("")
-# )
-# # NOTE: parsing issues can be ignored; are due to empty values not being
-# #       included in the data when they occur on the "right end":
-# #       problems(ebird_csv) %>%
-# #       count(expected, actual)
-# 
-# # reorganize and reformat data
-# dat =
-#   ebird_csv %>%
-#   janitor::clean_names() %>%
-#   select(submission_id, date, everything()) %>%
-#   arrange(date, time) %>%
-#   mutate(
-#     year = factor(year(date)),
-#     month = month(date),
-#     day_of_year = yday(date),
-#     us_season = case_when(
-#       month < 3 | month == 12~ "winter",
-#       month < 6 ~ "spring",
-#       month < 9 ~ "summer",
-#       month < 12 ~ "fall",
-#       TRUE ~ NA
-#     ),
-#     us_season = factor(us_season, levels = c("spring", "summer", "fall", "winter")),
-#     month = factor(month(date, label = TRUE)),
-#     # convert "X" to -1 so count can be stored as an integer
-#     count = as.numeric(ifelse(count == "X", "-1", count))
-#   )
-# earliest_date = min(ebird_csv$Date)
-# latest_date = max(ebird_csv$Date)
-# #total_species = nrow(dat %>% distinct(common_name))
-# total_checklists = nrow(dat %>% distinct(submission_id))
-# hotspot_values =
-#   dat %>% 
-#   distinct(location, submission_id) %>% 
-#   count(location, sort = TRUE) %>%
-#   pull(location)
+source("helper-functions.R", local = TRUE)
 ```
 
 ```{r}
@@ -167,159 +72,18 @@ hotspot_longitude = reactiveVal(0)
 hotspot_name = reactiveVal("")
 
 ebird_dat = reactiveVal({
-  read_csv("MyEBirdData.csv",
-           col_types = cols(
-             `Submission ID` = col_character(),
-             `Common Name` = col_character(),
-             `Scientific Name` = col_character(),
-             `Taxonomic Order` = col_double(),
-             Count = col_character(), #!
-             `State/Province` = col_character(),
-             County = col_character(),
-             `Location ID` = col_character(),
-             Location = col_character(),
-             Latitude = col_double(),
-             Longitude = col_double(),
-             Date = col_date(format = ""),
-             Time = col_time(format = ""),
-             Protocol = col_character(),
-             `Duration (Min)` = col_double(),
-             `All Obs Reported` = col_double(),
-             `Distance Traveled (km)` = col_double(),
-             `Area Covered (ha)` = col_logical(),
-             `Number of Observers` = col_double(),
-             `Breeding Code` = col_character(),
-             `Observation Details` = col_character(),
-             `Checklist Comments` = col_character(),
-             `ML Catalog Numbers` = col_character()
-           ),
-           na = c("")
-  ) %>% 
-    janitor::clean_names() %>%
-    select(submission_id, date, everything()) %>%
-    arrange(date, time) %>%
-    mutate(
-      year = factor(year(date)),
-      month = month(date),
-      day_of_year = yday(date),
-      us_season = case_when(
-        month < 3 | month == 12~ "winter",
-        month < 6 ~ "spring",
-        month < 9 ~ "summer",
-        month < 12 ~ "fall",
-        TRUE ~ NA
-      ),
-      us_season = factor(us_season, levels = c("spring", "summer", "fall", "winter")),
-      month = factor(month(date, label = TRUE)),
-      # convert "X" to -1 so count can be stored as an integer
-      count = as.numeric(ifelse(count == "X", "-1", count))
-    )
+  read_ebird_data()
 })
 
 imported_dat = reactive({
   req(input$upload)
-  imported_dat =
-    read_csv(input$upload$datapath,
-             col_types = cols(
-               `Submission ID` = col_character(),
-               `Common Name` = col_character(),
-               `Scientific Name` = col_character(),
-               `Taxonomic Order` = col_double(),
-               Count = col_character(), #!
-               `State/Province` = col_character(),
-               County = col_character(),
-               `Location ID` = col_character(),
-               Location = col_character(),
-               Latitude = col_double(),
-               Longitude = col_double(),
-               Date = col_date(format = ""),
-               Time = col_time(format = ""),
-               Protocol = col_character(),
-               `Duration (Min)` = col_double(),
-               `All Obs Reported` = col_double(),
-               `Distance Traveled (km)` = col_double(),
-               `Area Covered (ha)` = col_logical(),
-               `Number of Observers` = col_double(),
-               `Breeding Code` = col_character(),
-               `Observation Details` = col_character(),
-               `Checklist Comments` = col_character(),
-               `ML Catalog Numbers` = col_character()
-             ),
-             na = c("")
-    ) %>% 
-    janitor::clean_names() %>%
-    select(submission_id, date, everything()) %>%
-    arrange(date, time) %>%
-    mutate(
-      year = factor(year(date)),
-      month = month(date),
-      day_of_year = yday(date),
-      us_season = case_when(
-        month < 3 | month == 12~ "winter",
-        month < 6 ~ "spring",
-        month < 9 ~ "summer",
-        month < 12 ~ "fall",
-        TRUE ~ NA
-      ),
-      us_season = factor(us_season, levels = c("spring", "summer", "fall", "winter")),
-      month = factor(month(date, label = TRUE)),
-      # convert "X" to -1 so count can be stored as an integer
-      count = as.numeric(ifelse(count == "X", "-1", count))
-    )
+  imported_dat = read_ebird_data(input$upload$datapath)
 })
-
 
 observeEvent(input$upload, {
   # triggered in response to the user uploading a file
   import_counter(import_counter() + 1)
-  imported_dat =
-    read_csv(input$upload$datapath,
-             col_types = cols(
-               `Submission ID` = col_character(),
-               `Common Name` = col_character(),
-               `Scientific Name` = col_character(),
-               `Taxonomic Order` = col_double(),
-               Count = col_character(), #!
-               `State/Province` = col_character(),
-               County = col_character(),
-               `Location ID` = col_character(),
-               Location = col_character(),
-               Latitude = col_double(),
-               Longitude = col_double(),
-               Date = col_date(format = ""),
-               Time = col_time(format = ""),
-               Protocol = col_character(),
-               `Duration (Min)` = col_double(),
-               `All Obs Reported` = col_double(),
-               `Distance Traveled (km)` = col_double(),
-               `Area Covered (ha)` = col_logical(),
-               `Number of Observers` = col_double(),
-               `Breeding Code` = col_character(),
-               `Observation Details` = col_character(),
-               `Checklist Comments` = col_character(),
-               `ML Catalog Numbers` = col_character()
-             ),
-             na = c("")
-    ) %>% 
-    janitor::clean_names() %>%
-    select(submission_id, date, everything()) %>%
-    arrange(date, time) %>%
-    mutate(
-      year = factor(year(date)),
-      month = month(date),
-      day_of_year = yday(date),
-      us_season = case_when(
-        month < 3 | month == 12~ "winter",
-        month < 6 ~ "spring",
-        month < 9 ~ "summer",
-        month < 12 ~ "fall",
-        TRUE ~ NA
-      ),
-      us_season = factor(us_season, levels = c("spring", "summer", "fall", "winter")),
-      month = factor(month(date, label = TRUE)),
-      # convert "X" to -1 so count can be stored as an integer
-      count = as.numeric(ifelse(count == "X", "-1", count))
-    )
+  imported_dat = read_ebird_data(input$upload$datapath)
   ebird_dat(imported_dat)
   earliest_date(min(imported_dat$date))
   latest_date(max(imported_dat$date))
@@ -519,11 +283,13 @@ output$species_count_plot = renderGirafe({
     theme_gray(base_size = 14) +
     theme(
       panel.grid = element_blank(),
-      panel.background = element_blank()
+      panel.background = element_blank(),
+      axis.title.y = element_text(margin = margin(t = 0, r = 15, b = 0, l = 0)),
+      plot.subtitle = element_text(margin = margin(t = 0, r = 0, b = 15, l = 0))
     ) +
     labs(
-      # title = "Total species reported by checklist",
-      subtitle = "Click on a data point to open the checklist in eBird",
+#      title = "Total species reported by checklist",
+      subtitle = "click on a data point to open the checklist in eBird",
       x = "",
       y = "Total species reported"
     )
@@ -591,45 +357,6 @@ output$species_count_plot = renderGirafe({
     )
 })
 
-my_percent = function(proportion){
-  percentage = proportion * 100
-  formatted_percentage = sprintf("%05.1f%%", percentage)
-  return(formatted_percentage)
-}
-
-bg = function(start, end, color, ...) {
-  paste(
-    "linear-gradient(90deg,transparent ",
-    my_percent(start),
-    ", ",
-    color, 
-    my_percent(start), 
-    ", ",
-    color, 
-    my_percent(end),
-    ", ",
-    light_gray,
-    my_percent(end),
-    ")"
-  )
-} 
-
-xnormalize = function(x, y){
-  y + (x / 100) * (1 - y)
-}
-
-my_color_bar = function(...){
-  formatter(
-    "span",
-    style = function(x) style(
-      display = "inline-block",
-      "text-align" = "left",
-      "width" = "100%",
-      "background" = bg(0, xnormalize(x, 0), ebird_green)
-    )
-  )
-}
-
 output$data_preview = DT::renderDT({
   selected_dat() %>%
     # mutate(
@@ -672,41 +399,6 @@ output$data_preview = DT::renderDT({
       )
     )
 })
-
-# output$data_preview = renderDataTable({
-#   DT::datatable(
-#     selected_dat() %>% 
-#       mutate(
-#         checklist = ifelse(
-#           protocol == "eBird - Traveling Count",
-#         submission_id,
-#         NA
-#         )
-#       ) %>%
-#       mutate(n_checklists = n_distinct(checklist, na.rm = TRUE)) %>% 
-#       group_by(common_name) %>% 
-#       summarize(
-#         first_seen = min(date),
-#         last_seen = max(date),
-#         perc_checklists = (100 * (n() / max(n_checklists)))  %>% round(1)
-#       ) %>% 
-#       rename(
-#         "Common name" = common_name,
-#         "First seen" = first_seen,
-#         "Last seen" = last_seen,
-#         "Percentage checklists" = perc_checklists
-#       ),
-#     options = list(
-#       pageLength = 10#,
-#       #      scrollX = TRUE,
-#       #      autoWidth = TRUE
-#     )#,
-# caption = htmltools::tags$caption(
-#   style = 'caption-side: top; text-align: center; font-size: 16px; font-weight: bold;',
-#   paste('Data from', input$hotspot_sorting, 'filtered by', input$column, '=', input$filter_value)
-# )
-#   )
-# })
 
 output$hotspot_map = renderLeaflet({
   leaflet() %>%
@@ -857,6 +549,8 @@ tags$style(type = "text/css", HTML(
 # for troubleshooting
 #verbatimTextOutput("testje")
 
+#p(bs_icon("feather"))
+
 div(
   # top margin to accommodate sidebar close symbol
   style = "margin-bottom: 15px; margin-top: 20px",
@@ -920,12 +614,6 @@ div(
   )
 )
 
-# sliderInput("dateRange", "Date Range:",
-#             min = as.Date("2025-01-01"),
-#             max = as.Date("2025-03-01"),
-#             value = c(as.Date("2025-01-01"), as.Date("2025-03-01")),
-#             timeFormat = "%b %Y")
-
 div(
   style = "margin-top: 15px",
   "1. ",
@@ -964,7 +652,7 @@ verbatimTextOutput("imported_data_statistics")
 box1 = value_box(
   title = "Species",
   value = textOutput("total_species_text"),
-  #  showcase = bs_icon("feather"),
+#  showcase = bs_icon("feather"),
   theme = "primary",
   #  style = 'background-color: #5092D0!important;')
   style = "font-size: 50px;")
@@ -1085,23 +773,4 @@ girafeOutput("species_count_plot")
 div(
   DT::DTOutput("data_preview")
 )
-# gt(observations) %>%
-#   tab_header(
-#     title = "Key Observations"
-#   ) %>%
-#   tab_style(
-#     style = list(
-#       cell_fill(color = "#f8f9fa"),
-#       cell_text(weight = "bold")
-#     ),
-#     locations = cells_column_labels()
-#   ) %>%
-#   data_color(
-#     columns = Significance,
-#     colors = scales::col_factor(
-#       palette = c("#28a745", "#ffc107", "#dc3545"),
-#       domain = c("Low", "Medium", "High")
-#     )
-#   )
 ```
-
