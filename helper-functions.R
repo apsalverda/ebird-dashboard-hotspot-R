@@ -1,0 +1,112 @@
+# helper functions for ebird-dashbird-hotspot.qmd
+
+read_ebird_data = function(my_filename = "MyEBirdData.csv"){
+  read_csv(
+    my_filename,
+    col_types = cols(
+      `Submission ID` = col_character(),
+      `Common Name` = col_character(),
+      `Scientific Name` = col_character(),
+      `Taxonomic Order` = col_double(),
+      Count = col_character(), #!
+      `State/Province` = col_character(),
+      County = col_character(),
+      `Location ID` = col_character(),
+      Location = col_character(),
+      Latitude = col_double(),
+      Longitude = col_double(),
+      Date = col_date(format = ""),
+      Time = col_time(format = ""),
+      Protocol = col_character(),
+      `Duration (Min)` = col_double(),
+      `All Obs Reported` = col_double(),
+      `Distance Traveled (km)` = col_double(),
+      `Area Covered (ha)` = col_logical(),
+      `Number of Observers` = col_double(),
+      `Breeding Code` = col_character(),
+      `Observation Details` = col_character(),
+      `Checklist Comments` = col_character(),
+      `ML Catalog Numbers` = col_character()
+    ),
+    na = c("")
+  ) %>%
+    janitor::clean_names() %>%
+    select(submission_id, date, everything()) %>%
+    arrange(date, time) %>%
+    mutate(
+      year = factor(year(date)),
+      month = month(date),
+      day_of_year = yday(date),
+      us_season = case_when(
+        month < 3 | month == 12~ "winter",
+        month < 6 ~ "spring",
+        month < 9 ~ "summer",
+        month < 12 ~ "fall",
+        TRUE ~ NA
+      ),
+      us_season = factor(us_season, levels = c("spring", "summer", "fall", "winter")),
+      month = factor(month(date, label = TRUE)),
+      # convert "X" to -1 so count can be stored as an integer
+      count = as.numeric(ifelse(count == "X", "-1", count))
+    )
+}
+
+ordinal_date_suffix = Vectorize(
+  function(date_str, year = TRUE, markdown_subscript = FALSE) {
+    date_obj = as.Date(date_str, "%Y-%m-%d")
+    day_suffix = c("st", "nd", "rd", rep("th", 17), "st", "nd", "rd", rep("th", 7), "st")
+    if (markdown_subscript == TRUE){ day_suffix = paste0("^", day_suffix, "^") }
+    formatted_date = paste0(
+      month(date_obj, label = TRUE, abbr = FALSE),
+      " ",
+      day(date_obj),
+      day_suffix[day(date_obj)],
+      ifelse(year == TRUE, paste0(
+        " ",
+        year(date_obj)
+      ),
+      ""
+      )
+    )
+    return(formatted_date)
+  }
+)
+
+my_percent = function(proportion){
+  percentage = proportion * 100
+  formatted_percentage = sprintf("%05.1f%%", percentage)
+  return(formatted_percentage)
+}
+
+bg = function(start, end, color, ...) {
+  paste(
+    "linear-gradient(90deg,transparent ",
+    my_percent(start),
+    ", ",
+    color,
+    my_percent(start),
+    ", ",
+    color,
+    my_percent(end),
+    ", ",
+    light_gray,
+    my_percent(end),
+    ")"
+  )
+}
+
+xnormalize = function(x, y){
+  y + (x / 100) * (1 - y)
+}
+
+my_color_bar = function(...){
+  formatter(
+    "span",
+    style = function(x) style(
+      display = "inline-block",
+      "text-align" = "left",
+      "width" = "100%",
+      "background" = bg(0, xnormalize(x, 0), ebird_green)
+    )
+  )
+}

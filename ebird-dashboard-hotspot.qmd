@@ -10,14 +10,14 @@ format:
       - icon: envelope-at-fill
         href: mailto:salverda@yahoo.com?subject=Your eBird dashboard
         target: _blank
+      - icon: linkedin
+        href: https://www.linkedin.com/in/anne-pier-salverda-37ab7042/
+        target: _blank
       - icon: mortarboard-fill
         href: https://scholar.google.com/citations?user=dnlnAJQAAAAJ
         target: _blank
       - icon: github
         href: https://github.com/apsalverda/ebird-dashboard-hotspot
-        target: _blank
-      - icon: linkedin
-        href: https://www.linkedin.com/in/anne-pier-salverda-37ab7042/
         target: _blank
     sidebar:
       style: "docked"
@@ -277,23 +277,30 @@ output$species_count_plot = renderGirafe({
         onclick = sprintf("window.open(\"https://ebird.org/checklist/%s\")", submission_id)
       )
     ) +
-    ylim(0, NA) +
     scale_x_date() +
-    scale_y_continuous(expand = expansion(add = c(1, 1))) +
+    scale_y_continuous(
+#      expand = expansion(add = c(1, 1)),
+      limits = c(0, NA),
+      breaks = ~unique(round(pretty(.)))
+      ) +
+        labs(
+#      title = "Total species reported by checklist",
+      subtitle = "Click on a data point to open the checklist in eBird.",
+      x = "",
+      y = "Total species reported"
+    ) +
     theme_gray(base_size = 14) +
     theme(
       panel.grid = element_blank(),
       panel.background = element_blank(),
       axis.title.y = element_text(margin = margin(t = 0, r = 15, b = 0, l = 0)),
-      plot.subtitle = element_text(margin = margin(t = 0, r = 0, b = 15, l = 0))
-    ) +
-    labs(
-#      title = "Total species reported by checklist",
-      subtitle = "click on a data point to open the checklist in eBird",
-      x = "",
-      y = "Total species reported"
+      plot.subtitle = element_text(
+        color = "#707070",
+        size = 10,
+        margin = margin(t = 0, r = 0, b = 15, l = 0)
+        )
     )
-  if(input$season_coloring =="none"){
+  if(input$season_coloring =="None"){
     plot = 
       plot +
       scale_color_manual(
@@ -302,31 +309,31 @@ output$species_count_plot = renderGirafe({
         guide = "none"
       )
   } else {
-    if(input$season_coloring =="southern hemisphere"){
+    if(input$season_coloring =="Southern hemisphere"){
       plot = 
         plot +
         scale_color_manual(
-          values = c(fall_color, winter_color, spring_color, summer_color),
+          values = c("spring" = fall_color, "summer" = winter_color, "fall" = spring_color, "winter" = summer_color),
           guide = "none"
         )
     } else {
       plot = 
         plot +
         scale_color_manual(
-          values = c(spring_color, summer_color, fall_color, winter_color),
+          values = c("spring" = spring_color, "summer" = summer_color, "winter" = winter_color, "fall" = fall_color),
           guide = "none"
         )
     }
   }
   # avoid fractions on the Y axis
-  y_axis_breaks = layer_scales(plot)$y$break_positions()
-  y_axis_breaks= y_axis_breaks[!is.na(y_axis_breaks)]
-  if (length(y_axis_breaks[y_axis_breaks != round(y_axis_breaks)]) > 0){
-    y_axis_breaks = y_axis_breaks[y_axis_breaks == round(y_axis_breaks)]
-    plot = 
-      plot +
-      scale_y_continuous(breaks = y_axis_breaks)
-  }
+  # y_axis_breaks = layer_scales(plot)$y$break_positions()
+  # y_axis_breaks = y_axis_breaks[!is.na(y_axis_breaks)]
+  # if (length(y_axis_breaks[y_axis_breaks != round(y_axis_breaks)]) > 0){
+  #   y_axis_breaks = y_axis_breaks[y_axis_breaks == round(y_axis_breaks)]
+  #   plot = 
+  #     plot +
+  #     scale_y_continuous(breaks = y_axis_breaks)
+  # }
   girafe(
     ggobj = plot, 
     pointsize = 60,
@@ -462,7 +469,7 @@ observeEvent(c(input$date_range, input$ebird_dat, input$selected_dat), {
 observeEvent(
   c(input$hotspot_sorting, input$upload),
   { 
-    if (input$hotspot_sorting == "alphabetically"){
+    if (input$hotspot_sorting == "Alphabetically"){
       hotspot_list = 
         ebird_dat() %>% 
         distinct(location) %>% 
@@ -481,7 +488,7 @@ observeEvent(
       hotspot_list = c("All", hotspot_list %>% pull())
     } else
     {
-      # arrange by number of checklists reported
+      # arrange by Number of checklists reported
       hotspot_list =
         ebird_dat() %>%
         distinct(location, submission_id) %>% 
@@ -571,15 +578,15 @@ selectInput(
 selectInput(
   "hotspot_sorting", 
   "Hotspot list sorting",
-  choices = list("alphabetically", "checklist count"),
-  selected = "checklist count"
+  choices = list("Alphabetically", "Number of checklists"),
+  selected = "Number of checklists"
 )
 
 selectInput(
   "season_coloring", 
   "Season colors",
-  choices = list("northern hemisphere", "southern hemisphere", "none"),
-  selected = "northern hemisphere"
+  choices = list("Northern hemisphere", "Southern hemisphere", "None"),
+  selected = "Northern hemisphere"
 )
 
 div(
