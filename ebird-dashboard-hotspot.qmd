@@ -4,8 +4,9 @@ title: "eBird User Dashboard"
 format: 
   dashboard:
     orientation: columns
-    theme: cosmo
-    css: style.css
+    theme: 
+      - cosmo
+      - styles.css
     nav-buttons:
       - icon: envelope-at-fill
         href: mailto:salverda@yahoo.com?subject=Your eBird dashboard
@@ -25,6 +26,11 @@ format:
       collapse: false
 server: shiny
 ---
+
+```{css, echo = FALSE, include = TRUE}
+
+<!-- .irs--shiny .irs-handle:hover { background-color: darkgray; width: 12px; height: 12px; top: 23px } -->
+```
 
 ```{r setup}
 #| include: false
@@ -70,6 +76,7 @@ import_counter = reactiveVal(0)
 hotspot_latitude = reactiveVal(0)
 hotspot_longitude = reactiveVal(0)
 hotspot_name = reactiveVal("")
+years = reactiveVal()
 
 ebird_dat = reactiveVal({
   read_ebird_data()
@@ -146,6 +153,9 @@ selected_dat = reactive({
   hotspot_latitude(top_lat_lng$latitude)
   hotspot_longitude(top_lat_lng$longitude)
   hotspot_name(top_lat_lng$location)
+  years(unique(my_selected_dat$year))
+  updateNumericInput(session, "year1", value = years()[1], min = years()[1], max = years()[length(years())])
+  updateNumericInput(session, "year2", value = years()[1], min = years()[1], max = years()[length(years())])
   return(my_selected_dat)
 })
 
@@ -153,7 +163,7 @@ total_species = reactive({
   selected_dat() %>% distinct(common_name) %>% nrow()
 })
 output$total_species_text = renderText({
-  total_species()
+  total_species() %>% format(big.mark = ",")
 }
 )
 
@@ -164,7 +174,7 @@ total_checklists = reactive({
     nrow()
 })
 output$total_checklists_text = renderText({
-  total_checklists()
+  total_checklists() %>% format(big.mark = ",")
 }
 )
 
@@ -184,27 +194,26 @@ total_observations = reactive({
 
 output$total_time_text = renderText({
   total_time()
-  #  paste(total_time(), " hours")
 }
 )
 
-last_trip = reactive({
-  max_date = max(selected_dat()$date)
-  paste(
-    month(max_date, label = TRUE),
-    " ",
-    mday(max_date),
-    ", ",
-    year(max_date)
-  )
-})
-output$last_trip_text = renderText({
-  last_trip()
-}
-)
+# last_trip = reactive({
+#   max_date = max(selected_dat()$date)
+#   paste(
+#     month(max_date, label = TRUE),
+#     " ",
+#     mday(max_date),
+#     ", ",
+#     year(max_date)
+#   )
+# })
+# output$last_trip_text = renderText({
+#   last_trip()
+# }
+# )
 
 output$total_observations_text = renderText({
-  total_observations()
+  total_observations() %>% format(big.mark = ",")
 })
 
 max_checklist = reactive({
@@ -279,12 +288,12 @@ output$species_count_plot = renderGirafe({
     ) +
     scale_x_date() +
     scale_y_continuous(
-#      expand = expansion(add = c(1, 1)),
+      #      expand = expansion(add = c(1, 1)),
       limits = c(0, NA),
       breaks = ~unique(round(pretty(.)))
-      ) +
-        labs(
-#      title = "Total species reported by checklist",
+    ) +
+    labs(
+      #      title = "Total species reported by checklist",
       subtitle = "Click on a data point to open the checklist in eBird.",
       x = "",
       y = "Total species reported"
@@ -298,7 +307,7 @@ output$species_count_plot = renderGirafe({
         color = "#707070",
         size = 10,
         margin = margin(t = 0, r = 0, b = 15, l = 0)
-        )
+      )
     )
   if(input$season_coloring =="None"){
     plot = 
@@ -375,14 +384,31 @@ output$data_preview = DT::renderDT({
     # ) %>%
     mutate(n_checklists = n_distinct(submission_id, na.rm = TRUE)) %>%
     group_by(common_name) %>%
+    mutate(
+      first_seen_checklist = ifelse(
+        date == min(date) & row_number() == 1,
+        submission_id,
+        NA),
+      last_seen_checklist = ifelse(
+        date == max(date) & row_number() == n(),
+        submission_id,
+        NA)
+    ) %>% 
+    fill(first_seen_checklist, .direction = "down") %>% 
+    fill(last_seen_checklist, .direction = "up") %>% 
     summarize(
       first_seen = min(date),
       last_seen = max(date),
+      first_seen_checklist = unique(first_seen_checklist),
+      last_seen_checklist = unique(last_seen_checklist),
       perc_checklists = (100 * (n() / max(n_checklists))) %>% round(1)
     ) %>%
     mutate(
-      perc_checklists = my_color_bar()(perc_checklists)
+      perc_checklists = my_color_bar()(perc_checklists),
+      first_seen = paste0("<a target='_blank' href='https://ebird.org/checklist/", first_seen_checklist,"'>", first_seen, "</a>"),
+      last_seen = paste0("<a target='_blank' href='https://ebird.org/checklist/", last_seen_checklist,"'>", last_seen, "</a>")
     ) %>% 
+    select(-c(first_seen_checklist, last_seen_checklist)) %>% 
     arrange(desc(perc_checklists)) %>% 
     rename(
       "species" = common_name,
@@ -423,6 +449,43 @@ output$hotspot_map = renderLeaflet({
     )
 }
 )
+
+output$large_hotspot_map = renderLeaflet({
+  leaflet() %>%
+    addTiles(
+      urlTemplate = "https://mts1.google.com/vt/lyrs=s&hl=en&src=app&x={x}&y={y}&z={z}&s=G",
+      attribution = "Google"
+    ) %>%
+    addMarkers(
+      lng = hotspot_longitude(), 
+      lat = hotspot_latitude(), 
+      popup = hotspot_name()
+      # lng = top_location_info$longitude, 
+      # lat = top_location_info$latitude, 
+      # popup = top_location_info$location
+    )
+}
+)
+
+output$year_plot1 = renderPlot({
+  selected_dat() %>% 
+    filter(year == input$year1) %>%
+    group_by(common_name) %>% 
+    slice(1) %>% 
+    ungroup() %>% 
+    ggplot(aes(x = date)) + 
+    stat_bin(aes(y=cumsum(..count..)), geom = 'step')
+})
+
+output$year_plot2 = renderPlot({
+  selected_dat() %>% 
+    filter(year == input$year2) %>%
+    group_by(common_name) %>% 
+    slice(1) %>% 
+    ungroup() %>% 
+    ggplot(aes(x = date)) + 
+    stat_bin(aes(y=cumsum(..count..)), geom = 'step')
+})
 
 # observeEvent(import_counter(), {
 #   testje(testje() + 1)
@@ -544,19 +607,10 @@ output$testje = renderText({
 # verbatimTextOutput("width")
 # verbatimTextOutput("height")
 
-tags$style(type = "text/css", HTML(
-  ".irs-bar { display: none }",
-  ".irs-bar-edge { display: none }",
-  ".irs-single { color: black; background: transparent }",
-  ".irs-from { color: black; background: transparent }",
-  ".irs-to { color: black; background: transparent }",
-  ".js-irs-0 .irs-slider { background: #007FA3; width: 12px; height: 12px; top: 23px }",
-  ".js-irs-0 .irs-slider:hover { background: #007FA3; width: 12px; height: 12px; top: 23px }"))
-
 # for troubleshooting
 #verbatimTextOutput("testje")
 
-#p(bs_icon("feather"))
+# p(bs_icon("feather"))
 
 div(
   # top margin to accommodate sidebar close symbol
@@ -590,7 +644,7 @@ selectInput(
 )
 
 div(
-  style = "display: inline-block; padding-top: 0px; margin-top: 0px; margin-left: 15px; margin-right: 15px; font-size: 15px; width: 165px",
+  style = "display: inline-block; padding-top: 0px; margin-top: 0px; margin-left: 16px; margin-right: 16px; font-size: 15px; width: 163px",
   div(style = "display: none;", "Slider"),
   sliderInput(
     "date_range_slider",
@@ -659,7 +713,7 @@ verbatimTextOutput("imported_data_statistics")
 box1 = value_box(
   title = "Species",
   value = textOutput("total_species_text"),
-#  showcase = bs_icon("feather"),
+  # showcase = bs_icon("feather"),
   theme = "primary",
   #  style = 'background-color: #5092D0!important;')
   style = "font-size: 50px;")
@@ -780,4 +834,49 @@ girafeOutput("species_count_plot")
 div(
   DT::DTOutput("data_preview")
 )
+```
+
+```{r}
+#| title: "Map"
+leafletOutput(
+  "large_hotspot_map"#,
+  #    height = "200", 
+  #    width = "200"
+)
+```
+
+
+```{r}
+#| title: "Year list"
+#| layout-ncol: 2
+#| layout-nrow: 2
+plotOutput("year_plot1")
+plotOutput("year_plot2")
+numericInput(
+  "year1",
+  "Year 1",
+  value = 1,
+  min = 1,
+  max = 1
+)
+numericInput(
+  "year2",
+  "Year 2",
+  value = 1,
+  min = 1,
+  max = 1
+)
+# selectInput(
+#   "year1",
+#   "",
+#   choices = years(),
+#   selected = NULL,
+#   selectize = TRUE
+# )
+# selectInput(
+#   "year2", 
+#   "",
+#   choices = years(),
+#   selected = NULL
+# )
 ```
