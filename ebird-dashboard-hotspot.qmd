@@ -68,6 +68,8 @@ change_daterange = reactiveVal(Sys.time())
 reactive_hotspot_values = reactiveVal(list(NULL))
 earliest_date = reactiveVal()
 latest_date = reactiveVal()
+earliest_year = reactiveVal()
+latest_year = reactiveVal()
 n_rows_data = reactiveVal()
 n_checklists = reactiveVal()
 n_species = reactiveVal()
@@ -147,6 +149,8 @@ selected_dat = reactive({
       date >= input$date_range[1],
       date <= input$date_range[2]
     )
+  earliest_year(min(as.numeric(as.character(my_selected_dat$year))))
+  latest_year(max(as.numeric(as.character(my_selected_dat$year))))
   top_lat_lng =
     my_selected_dat %>%
     distinct(location, latitude, longitude)
@@ -154,8 +158,8 @@ selected_dat = reactive({
   hotspot_longitude(top_lat_lng$longitude)
   hotspot_name(top_lat_lng$location)
   years(unique(my_selected_dat$year))
-  updateNumericInput(session, "year1", value = years()[1], min = years()[1], max = years()[length(years())])
-  updateNumericInput(session, "year2", value = years()[1], min = years()[1], max = years()[length(years())])
+  # updateNumericInput(session, "year1", value = years()[1], min = years()[1], max = years()[length(years())])
+  # updateNumericInput(session, "year2", value = years()[1], min = years()[1], max = years()[length(years())])
   return(my_selected_dat)
 })
 
@@ -433,6 +437,59 @@ output$data_preview = DT::renderDT({
     )
 })
 
+output$year1_table = DT::renderDT({
+  table_dat = 
+    selected_dat()%>% 
+    filter(year == input$year_list_slider[1]) %>% 
+    group_by(common_name) %>% 
+    slice(1) %>% 
+    ungroup() %>% 
+    arrange(desc(date)) %>% 
+    mutate(date = substr(date, 6, length(date))) %>% 
+    select(common_name, date)
+  n_species = paste0(input$year_list_slider[1], ": ", nrow(table_dat), " species")
+  table_dat %>% 
+    rename(
+      !!n_species := common_name
+    ) %>% 
+    formattable() %>% 
+    as.datatable(
+      rownames = FALSE,
+      options = list(
+        dom = "ft",
+        scrollY = ((input$pltChange$height - 122) * .50) - 148,
+        pageLength = 10000
+      )
+    )
+})
+
+output$year2_table = DT::renderDT({
+  table_dat = 
+    selected_dat()%>% 
+    filter(year == input$year_list_slider[2]) %>% 
+    group_by(common_name) %>%
+    arrange(date) %>% 
+    slice(1) %>% 
+    ungroup() %>% 
+    arrange(desc(date)) %>% 
+    mutate(date = substr(date, 6, length(date))) %>% 
+    select(common_name, date)
+  n_species = paste0(input$year_list_slider[2], ": ", nrow(table_dat), " species")
+  table_dat %>% 
+    rename(
+      !!n_species := common_name
+    ) %>% 
+    formattable() %>% 
+    as.datatable(
+      rownames = FALSE,
+      options = list(
+        dom = "ft",
+        scrollY = ((input$pltChange$height - 122) * .50) - 148,
+        pageLength = 10000
+      )
+    )
+})
+
 output$hotspot_map = renderLeaflet({
   leaflet() %>%
     addTiles(
@@ -469,30 +526,26 @@ output$large_hotspot_map = renderLeaflet({
 
 output$year_plot1 = renderPlot({
   selected_dat() %>% 
-    filter(year == input$year1) %>%
-    group_by(common_name) %>% 
-    slice(1) %>% 
-    ungroup() %>% 
-    ggplot(aes(x = date)) + 
-    stat_bin(aes(y=cumsum(..count..)), geom = 'step')
+    year_list_ecdf(
+      year_from = input$year_list_slider[1], 
+      year_to = input$year_list_slider[2]
+      )
 })
 
-output$year_plot2 = renderPlot({
-  selected_dat() %>% 
-    filter(year == input$year2) %>%
-    group_by(common_name) %>% 
-    slice(1) %>% 
-    ungroup() %>% 
-    ggplot(aes(x = date)) + 
-    stat_bin(aes(y=cumsum(..count..)), geom = 'step')
-})
-
-# observeEvent(import_counter(), {
-#   testje(testje() + 1)
-# })
+observeEvent(c(earliest_year(), latest_year()), {
+  updateSliderInput(
+    session,
+    "year_list_slider",
+    min = earliest_year(),
+    max = latest_year(),
+    value = c(earliest_year(), latest_year())
+  )
+}
+)
 
 observeEvent(c(earliest_date(), latest_date()), {
   testje(testje() + 1)
+  # reset sidebar date input if earliest or latest date of data changes
   updateSliderInput(
     session,
     "date_range_slider",
@@ -516,6 +569,7 @@ observeEvent(c(input$date_range_slider, input$ebird_dat, input$selected_dat), {
   }
 }
 )
+
 observeEvent(c(input$date_range, input$ebird_dat, input$selected_dat), {
   if (difftime(Sys.time(), change_daterange()) > react_delay) {
     change_slider(Sys.time())
@@ -589,9 +643,12 @@ observeEvent(
 # for trouble shooting
 output$testje = renderText({
   paste0(
-    "testje: ", testje(), 
+    "X: ", input$year_list_slider[1],
+    "\ntestje: ", testje(), 
     "\nearliest date: ", earliest_date(),
     "\nlatest date: ", latest_date(),
+    "\nearliest year: ", earliest_year(),
+    "\nlatest year: ", latest_year(),
     "\nimport counter: ", import_counter()
   )}
 )
@@ -837,34 +894,62 @@ div(
 ```
 
 ```{r}
-#| title: "Map"
-leafletOutput(
-  "large_hotspot_map"#,
-  #    height = "200", 
-  #    width = "200"
-)
-```
-
-
-```{r}
 #| title: "Year list"
-#| layout-ncol: 2
-#| layout-nrow: 2
-plotOutput("year_plot1")
-plotOutput("year_plot2")
-numericInput(
-  "year1",
-  "Year 1",
-  value = 1,
-  min = 1,
-  max = 1
+#| layout: [[10, 10], [10, 10]]
+
+div(
+  style = "display: inline-block; padding-top: 0px; margin-top: 0px; margin-left: 16px; margin-right: 16px; font-size: 15px; margin-bottom: 100px;",
+  sliderInput(
+    "year_list_slider",
+    "",
+    min = 2020,
+    max = 2025,
+    value =  c(2024, 2025),
+    ticks = FALSE,
+    timeFormat = "%Y",
+    sep = "",
+    width = "45%"
+  ),
+  p("Total species reported") 
 )
-numericInput(
-  "year2",
-  "Year 2",
-  value = 1,
-  min = 1,
-  max = 1
+# div(
+#   style = "margin-bottom: 75px; margin-top: 0px",
+#   numericInput(
+#     "year1",
+#     "",
+#     value = 1,
+#     min = 1,
+#     max = 1,
+#     width = "17%"
+#   )
+# )
+# div(
+#   style = "margin-bottom: 75px; margin-top: 0px",
+#   numericInput(
+#     "year2",
+#     "",
+#     value = 1,
+#     min = 1,
+#     max = 1,
+#     width = "17%"
+#   )
+# )
+div(
+  style = "margin-top: 10px; font-size: .75em;",
+  DT::DTOutput("year1_table")
+)
+div(
+  style = "margin-top: 0px;",
+  plotOutput("year_plot1")
+)
+# div(
+#   style = "margin-top: 0px;",
+#   plotOutput("year_plot2")
+# )
+
+div(
+  style = "margin-top: 10px; font-size: .75em;",
+  DT::DTOutput("year2_table", height = "50%")
 )
 # selectInput(
 #   "year1",
@@ -879,4 +964,13 @@ numericInput(
 #   choices = years(),
 #   selected = NULL
 # )
+```
+
+```{r}
+#| title: "Map"
+leafletOutput(
+  "large_hotspot_map"#,
+  #    height = "200", 
+  #    width = "200"
+)
 ```
