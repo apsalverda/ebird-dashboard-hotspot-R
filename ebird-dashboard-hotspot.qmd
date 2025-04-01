@@ -4,6 +4,7 @@ title: "eBird User Dashboard"
 format: 
   dashboard:
     orientation: columns
+    expandable: false
     theme: 
       - cosmo
       - styles.css
@@ -430,8 +431,6 @@ output$data_preview = DT::renderDT({
       rownames = FALSE,
       options = list(
         dom = "ft",
-        scrollY = ((input$pltChange$height - 122) * .88) - 148,
-        #        scrollY = paste0(0.65 * (input$pltChange$height - 95 - 80), "px"),
         pageLength = 10000
       )
     )
@@ -457,7 +456,6 @@ output$year1_table = DT::renderDT({
       rownames = FALSE,
       options = list(
         dom = "ft",
-        scrollY = ((input$pltChange$height - 122) * .50) - 148,
         pageLength = 10000
       )
     )
@@ -669,16 +667,6 @@ output$testje = renderText({
 
 # p(bs_icon("feather"))
 
-div(
-  # top margin to accommodate sidebar close symbol
-  style = "margin-bottom: 15px; margin-top: 20px",
-  leafletOutput(
-    "hotspot_map",
-    height = "200", 
-    width = "200"
-  )
-)
-
 selectInput(
   "hotspot", 
   "Hotspot",
@@ -699,6 +687,16 @@ selectInput(
   choices = list("Northern hemisphere", "Southern hemisphere", "None"),
   selected = "Northern hemisphere"
 )
+
+# div(
+#   # top margin to accommodate sidebar close symbol
+#   style = "margin-bottom: 15px; margin-top: 20px",
+#   leafletOutput(
+#     "hotspot_map",
+#     height = "200", 
+#     width = "200"
+#   )
+# )
 
 div(
   style = "display: inline-block; padding-top: 0px; margin-top: 0px; margin-left: 16px; margin-right: 16px; font-size: 15px; width: 163px",
@@ -893,12 +891,17 @@ div(
 )
 ```
 
-```{r}
-#| title: "Year list"
-#| layout: [[10, 10], [10, 10]]
 
+### Year list
+
+:::: {.columns-container border-style="none"}
+:::: {.columns border-style="none"} 
+::: {.column width="100%"}
+::: {.top-container border-style="none"}
+
+```{r}
 div(
-  style = "display: inline-block; padding-top: 0px; margin-top: 0px; margin-left: 16px; margin-right: 16px; font-size: 15px; margin-bottom: 100px;",
+  style = "display: inline-block; padding-top: 0px; margin-top: 0px; margin-left: 16px; margin-right: 16px; font-size: 15px; margin-bottom: 300px;",
   sliderInput(
     "year_list_slider",
     "",
@@ -908,66 +911,52 @@ div(
     ticks = FALSE,
     timeFormat = "%Y",
     sep = "",
-    width = "45%"
-  ),
-  p("Total species reported") 
+    width = "100%"
+  )
 )
-# div(
-#   style = "margin-bottom: 75px; margin-top: 0px",
-#   numericInput(
-#     "year1",
-#     "",
-#     value = 1,
-#     min = 1,
-#     max = 1,
-#     width = "17%"
-#   )
-# )
-# div(
-#   style = "margin-bottom: 75px; margin-top: 0px",
-#   numericInput(
-#     "year2",
-#     "",
-#     value = 1,
-#     min = 1,
-#     max = 1,
-#     width = "17%"
-#   )
-# )
-div(
-  style = "margin-top: 10px; font-size: .75em;",
-  DT::DTOutput("year1_table")
-)
-div(
-  style = "margin-top: 0px;",
-  plotOutput("year_plot1")
-)
-# div(
-#   style = "margin-top: 0px;",
-#   plotOutput("year_plot2")
-# )
-
-div(
-  style = "margin-top: 10px; font-size: .75em;",
-  DT::DTOutput("year2_table", height = "50%")
-)
-# selectInput(
-#   "year1",
-#   "",
-#   choices = years(),
-#   selected = NULL,
-#   selectize = TRUE
-# )
-# selectInput(
-#   "year2", 
-#   "",
-#   choices = years(),
-#   selected = NULL
-# )
 ```
 
+:::
+::: {.bottom-container}
+
 ```{r}
-#| title: "Map"
+div(
+  style = "margin: 0px; padding: 0px;border-style: none",
+  plotOutput("year_plot1")
+)
+```
+
+:::
+:::
+
+::: {.column width="100%"}
+::: {.top-right-container}
+
+```{r}
+div(
+  style = "font-size: .75em;",
+  DT::DTOutput("year1_table")
+)
+```
+
+:::
+::: {.bottom-right-container}
+
+```{r}
+div(
+  style = "font-size: .75em;",
+  DT::DTOutput("year2_table")
+)
+```
+
+:::
+:::
+::::
+::::
+
+### Map
+
+```{r}
 leafletOutput(
   "large_hotspot_map"#,
   #    height = "200", 

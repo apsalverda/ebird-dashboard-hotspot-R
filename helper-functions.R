@@ -110,3 +110,42 @@ my_color_bar = function(...){
     )
   )
 }
+
+year_list_ecdf = function(my_data, year_from = 2025, year_to = 2025){
+  my_data %>%
+    filter(year == year_from | year == year_to) %>%
+    group_by(year, common_name) %>%
+    slice(1) %>%
+    arrange(year, date) %>%
+    group_by(year) %>%
+    mutate(
+      total = row_number(),
+      date = as.Date(str_replace(as.character(date), as.character(year_from), as.character(year_to)))
+      ) %>%
+    ungroup() %>%
+    ggplot(aes(x = date, y = total, color = year)) +
+    geom_step() +
+    scale_color_manual(values = c("lightgray", "black")) +
+    scale_x_date(
+      limits = c(as.Date(paste0(year_to, "-01-01")), as.Date(paste0(year_to, "-12-31"))),
+      date_labels = c("J", substr(month.abb, 1, 1)), # HACK
+      date_breaks = "1 month",
+      expand = expansion(mult = c(.005, .005))
+    ) +
+    # scale_y_continuous(limits = c(0, max_y)) +
+    labs(
+      title = "",
+      x = "",
+      y = ""
+    ) +
+    theme_gray(base_size = 14) +
+    theme(
+      panel.background = element_blank(),
+      legend.position = "inside",
+      legend.position.inside = c(.9, .12),
+      legend.background = element_rect(color = NA, fill = NA),
+      legend.box.background = element_rect(color = NA, fill = NA),
+      legend.title = element_blank(),
+      plot.margin = margin(0, 10, 0, 0, "pt")
+    )
+}
