@@ -14,23 +14,23 @@
 }
 
 
-.top-container {
+.top-left-container {
   height: 88px;
   border: none;
 }
 
-.bottom-container {
-  height: 400px;
+.bottom-left-container {
+  height: 356px;
   border: none;
 }
 
 .top-right-container {
-  height: 244px;
+  height: 222px;
   border: none;
 }
 
 .bottom-right-container {
-  height: 244px;
+  height: 222px;
   border: none;
 }
 

@@ -443,7 +443,7 @@ output$year1_table = DT::renderDT({
     group_by(common_name) %>% 
     slice(1) %>% 
     ungroup() %>% 
-    arrange(desc(date)) %>% 
+    arrange(date) %>% 
     mutate(date = substr(date, 6, length(date))) %>% 
     select(common_name, date)
   n_species = paste0(input$year_list_slider[1], ": ", nrow(table_dat), " species")
@@ -456,6 +456,7 @@ output$year1_table = DT::renderDT({
       rownames = FALSE,
       options = list(
         dom = "ft",
+        scrollY = ((input$pltChange$height - 122) * .50) - 148,
         pageLength = 10000
       )
     )
@@ -469,7 +470,7 @@ output$year2_table = DT::renderDT({
     arrange(date) %>% 
     slice(1) %>% 
     ungroup() %>% 
-    arrange(desc(date)) %>% 
+    arrange(date) %>% 
     mutate(date = substr(date, 6, length(date))) %>% 
     select(common_name, date)
   n_species = paste0(input$year_list_slider[2], ": ", nrow(table_dat), " species")
@@ -527,7 +528,7 @@ output$year_plot1 = renderPlot({
     year_list_ecdf(
       year_from = input$year_list_slider[1], 
       year_to = input$year_list_slider[2]
-      )
+    )
 })
 
 observeEvent(c(earliest_year(), latest_year()), {
@@ -707,7 +708,7 @@ div(
     min = Sys.Date() - 90,
     max = Sys.Date(),
     value =  c(Sys.Date() - 30, Sys.Date()),
-    step = 30,
+    step = 1,
     ticks = FALSE,
     timeFormat = "%b %Y"
   )
@@ -761,56 +762,69 @@ verbatimTextOutput("imported_data_statistics")
 
 # Hotspot {orientation="rows"}
 
-## Value boxes {height=12%}
+## Value boxes {height=10%}
 
 ```{r}
 #tags$body(tags$style(HTML('.bslib-value-box .value-box-title {font-size: 0.5rem;}')))
 box1 = value_box(
   title = "Species",
   value = textOutput("total_species_text"),
-  # showcase = bs_icon("feather"),
+  #  showcase = bs_icon("feather"),
   theme = "primary",
+  fill = TRUE,
+  height = NULL
   #  style = 'background-color: #5092D0!important;')
-  style = "font-size: 50px;")
+)
 box2 = value_box(
   title = "Checklists",
   value = textOutput("total_checklists_text"),
   #  showcase = bs_icon("list-check"),
-  theme = "primary"
+  theme = "primary",
+  fill = TRUE,
+  height = NULL
 )
 box3 = value_box(
   title = "Max checklist",
   value = textOutput("max_checklist_text"),
   #  showcase = bs_icon("trophy"),
   # theme = value_box_theme(bg = original_ebird_green, fg = "white")
-  theme = "primary"
+  theme = "primary",
+  fill = TRUE,
+  height = NULL
 )
-
 box4 = value_box(
   title = "Hours",
   value = textOutput("total_time_text"),
   #  showcase = bs_icon("stopwatch"),
-  theme = "primary"
+  theme = "primary",
+  fill = TRUE,
+  height = NULL
 )
 box5 = value_box(
   title = "Observations",
   value = textOutput("total_observations_text"),
-  theme = "primary"
+  theme = "primary",
+  width = NULL
 )
 layout_column_wrap(
   width = 1/5,
-  gap = "3px",
+  gap = "2px",
   heights_equal = "all",
-  box1, box2, box3, box4, box5
+  box1, box2, box3, box4, box5,
+  height = "80px",
+  min_height = "80px"
+#  max_height = "250px"
 )
 
 # layout_columns(
-#   col_widths = c(3, 3, 3, 3),
+#   col_widths = c(2, 2, 2, 2, 2),
 #   box1,
 #   box2,
 #   box3,
-#   box4
+#   box4,
+#   box5
 # )
+
 # value_boxes = list(
 #   value_box(
 #     title = "Species",
@@ -850,7 +864,7 @@ layout_column_wrap(
 # )
 ```
 
-## Tabs {height=88%, .tabset expandable=false overflow=hidden}
+## Tabs {height=90%, .tabset expandable=false overflow=hidden}
 
 ```{r}
 #| title: "Checklists"
@@ -897,9 +911,10 @@ div(
 :::: {.columns-container border-style="none"}
 :::: {.columns border-style="none"} 
 ::: {.column width="100%"}
-::: {.top-container border-style="none"}
+::: {.top-left-container border-style="none"}
 
 ```{r}
+# NOTE: size of each container on the Year List tab is defined in styles.css
 div(
   style = "display: inline-block; padding-top: 0px; margin-top: 0px; margin-left: 16px; margin-right: 16px; font-size: 15px; margin-bottom: 300px;",
   sliderInput(
@@ -917,7 +932,7 @@ div(
 ```
 
 :::
-::: {.bottom-container}
+::: {.bottom-left-container}
 
 ```{r}
 div(
@@ -962,4 +977,10 @@ leafletOutput(
   #    height = "200", 
   #    width = "200"
 )
+```
+
+### Help
+
+```{r}
+p("Placeholder for text on the help tab.")
 ```
