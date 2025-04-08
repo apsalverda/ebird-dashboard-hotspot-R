@@ -37,8 +37,8 @@ server: shiny
 #| include: false
 library(tidyverse)
 library(ggplot2)
-library(gt)
-library(plotly)
+#library(gt)
+#library(plotly)
 library(shiny)
 library(bslib)
 library(bsicons)
@@ -379,7 +379,8 @@ output$species_count_plot = renderGirafe({
 })
 
 output$data_preview = DT::renderDT({
-  selected_dat() %>%
+  data_preview_table =
+    selected_dat() %>%
     # mutate(
     #   checklist = ifelse(
     #     protocol == "eBird - Traveling Count",
@@ -406,7 +407,8 @@ output$data_preview = DT::renderDT({
       last_seen = max(date),
       first_seen_checklist = unique(first_seen_checklist),
       last_seen_checklist = unique(last_seen_checklist),
-      perc_checklists = (100 * (n() / max(n_checklists))) %>% round(1)
+      perc_checklists = (100 * (n() / max(n_checklists))) %>% round(1),
+      n_checklists = n()
     ) %>%
     mutate(
       perc_checklists = my_color_bar()(perc_checklists),
@@ -419,7 +421,8 @@ output$data_preview = DT::renderDT({
       "species" = common_name,
       "first" = first_seen,
       "last" = last_seen,
-      "% checklists" = perc_checklists
+      "% checklists" = perc_checklists,
+      "N checklists" = n_checklists
     ) %>%
     #     mutate(
     #       # used to display scrollable height, for trouble shooting
@@ -431,9 +434,13 @@ output$data_preview = DT::renderDT({
       rownames = FALSE,
       options = list(
         dom = "ft",
+        scrollY = ((input$pltChange$height - 122)) - 148,
         pageLength = 10000
       )
     )
+  # something in the above changes N checklists to character; fix for sorting
+  data_preview_table$x$data$`N checklists` = as.numeric(data_preview_table$x$data$`N checklists`)
+  return(data_preview_table)
 })
 
 output$year1_table = DT::renderDT({
@@ -813,7 +820,7 @@ layout_column_wrap(
   box1, box2, box3, box4, box5,
   height = "80px",
   min_height = "80px"
-#  max_height = "250px"
+  #  max_height = "250px"
 )
 
 # layout_columns(
@@ -901,7 +908,8 @@ girafeOutput("species_count_plot")
 ```{r}
 #| title: "Species"
 div(
-  DT::DTOutput("data_preview")
+  DT::DTOutput("data_preview"),
+  style = "font-size: 80%"
 )
 ```
 
