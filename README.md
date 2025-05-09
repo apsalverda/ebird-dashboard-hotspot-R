@@ -6,6 +6,6 @@ This dashboard written in Quarto/R/Shiny allows a user to upload explore their p
 
 ![](species-screenshot.png)
 
-![](year-screenshot.png)
+![](yearlist-screenshot.png)
 
-![](maps-screenshot.png)
+![](map-screenshot.png)
