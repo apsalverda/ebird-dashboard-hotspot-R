@@ -35,16 +35,42 @@ server: shiny
 
 ```{r setup}
 #| include: false
-library(tidyverse)
-library(ggplot2)
-#library(gt)
-#library(plotly)
-library(shiny)
-library(bslib)
-library(bsicons)
-library(leaflet)
-library(ggiraph)
-library(formattable)
+if (!file.exists("MyEBirdData.csv")){
+  stop("Cannot compile document. Missing required file \"MyEBirdData.csv\".\nPlease add this file with your personal eBird data to the folder from which you compile the document.")
+}
+
+required_packages =
+  c(
+    "tidyverse",
+    "ggplot2",
+    "shiny",
+    "bslib",
+    "bsicons",
+    "leaflet",
+    "ggiraph",
+    "formattable"
+    )
+missing_packages = required_packages[!sapply(required_packages, requireNamespace, quietly = TRUE)]
+if (length(missing_packages) > 0){
+  stop(
+    paste(
+      "The following packages are required to run the dashboard:\n\n",
+      paste0(missing_packages, collapse = ", "),
+      "\n\nPlease make sure to install these packages before compiling the dashboard."
+      )
+  )
+}
+
+invisible(lapply(required_packages, library, character.only = TRUE))
+
+# library(tidyverse)
+# library(ggplot2)
+# library(shiny)
+# library(bslib)
+# library(bsicons)
+# library(leaflet)
+# library(ggiraph)
+# library(formattable)
 
 original_ebird_green = "#2F7742"
 ebird_green = "#70c687"
@@ -425,7 +451,7 @@ output$data_preview = DT::renderDT({
       "N checklists" = n_checklists
     ) %>%
     #     mutate(
-    #       # used to display scrollable height, for trouble shooting
+    #       # can be used to display scrollable height, for trouble shooting
     #       height = input$pltChange$height,
     #       scrolly = paste0(0.65 * (input$pltChange$height - 95 - 80), "px")
     # ) %>%
@@ -450,7 +476,7 @@ output$year1_table = DT::renderDT({
     group_by(common_name) %>% 
     slice(1) %>% 
     ungroup() %>% 
-    arrange(date) %>% 
+    arrange(desc(date)) %>% 
     mutate(date = substr(date, 6, length(date))) %>% 
     select(common_name, date)
   n_species = paste0(input$year_list_slider[1], ": ", nrow(table_dat), " species")
@@ -477,7 +503,7 @@ output$year2_table = DT::renderDT({
     arrange(date) %>% 
     slice(1) %>% 
     ungroup() %>% 
-    arrange(date) %>% 
+    arrange(desc(date)) %>% 
     mutate(date = substr(date, 6, length(date))) %>% 
     select(common_name, date)
   n_species = paste0(input$year_list_slider[2], ": ", nrow(table_dat), " species")
@@ -990,5 +1016,7 @@ leafletOutput(
 ### Help
 
 ```{r}
-p("Placeholder for text on the help tab.")
+#p("Placeholder for text on the help tab.")
+div(a("eBird Best Practices", href = "https://support.ebird.org/en/support/solutions/articles/48000795623-ebird-rules-and-best-practices"),
+a("How to count birds", href = "https://support.ebird.org/en/support/solutions/articles/48000838845"))
 ```

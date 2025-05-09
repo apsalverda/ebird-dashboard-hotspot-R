@@ -48,7 +48,8 @@ read_ebird_data = function(my_filename = "MyEBirdData.csv"){
       month = factor(month(date, label = TRUE)),
       # convert "X" to -1 so count can be stored as an integer
       count = as.numeric(ifelse(count == "X", "-1", count))
-    )
+    ) |>
+    filter(!str_detect(common_name, "sp\\."))
 }
 
 ordinal_date_suffix = Vectorize(
@@ -132,9 +133,9 @@ year_list_ecdf = function(my_data, year_from = 2025, year_to = 2025){
       date_breaks = "1 month",
       expand = expansion(mult = c(.005, .005))
     ) +
-    # scale_y_continuous(limits = c(0, max_y)) +
+#    scale_y_continuous(expansion(mult = c(0, .05))) +
     labs(
-      title = "",
+      title = "Number of species reported",
       x = "",
       y = ""
     ) +
