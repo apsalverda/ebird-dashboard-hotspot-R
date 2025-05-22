@@ -63,7 +63,7 @@ ordinal_date_suffix = Vectorize(
       day(date_obj),
       day_suffix[day(date_obj)],
       ifelse(year == TRUE, paste0(
-        " ",
+        ", ",
         year(date_obj)
       ),
       ""
@@ -125,8 +125,9 @@ year_list_ecdf = function(my_data, year_from = 2025, year_to = 2025){
       ) %>%
     ungroup() %>%
     ggplot(aes(x = date, y = total, color = year)) +
-    geom_step() +
-    scale_color_manual(values = c("lightgray", "black")) +
+    geom_step(aes(linewidth = year)) +
+    scale_color_manual(values = c("lightgray", "#2375DF")) +
+    scale_linewidth_manual(values = c(.5, 1)) +
     scale_x_date(
       limits = c(as.Date(paste0(year_to, "-01-01")), as.Date(paste0(year_to, "-12-31"))),
       date_labels = c("J", substr(month.abb, 1, 1)), # HACK

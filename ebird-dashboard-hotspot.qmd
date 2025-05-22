@@ -298,12 +298,14 @@ output$import_filename = renderText({
 output$species_count_plot = renderGirafe({
   plot = 
     selected_dat() %>% 
-    count(submission_id, date, us_season) %>% 
+    count(submission_id, location, date, us_season) %>% 
     mutate(
       my_label = paste(
         n,
         "species on ", 
-        ordinal_date_suffix(date)
+        ordinal_date_suffix(date),
+        "\n",
+        location
       )
     ) %>% 
     ggplot(aes(x = date, y = n, color = us_season)) + 
@@ -325,7 +327,7 @@ output$species_count_plot = renderGirafe({
     ) +
     labs(
       #      title = "Total species reported by checklist",
-      subtitle = "Click on a data point to open the checklist in eBird.",
+      subtitle = "Note: Clicking on a data point opens the checklist in eBird",
       x = "",
       y = "Total species reported"
     ) +
@@ -618,7 +620,7 @@ observeEvent(c(input$date_range, input$ebird_dat, input$selected_dat), {
 observeEvent(
   c(input$hotspot_sorting, input$upload),
   { 
-    if (input$hotspot_sorting == "Alphabetically"){
+    if (input$hotspot_sorting == "Alphabetic"){
       hotspot_list = 
         ebird_dat() %>% 
         distinct(location) %>% 
@@ -711,7 +713,7 @@ selectInput(
 selectInput(
   "hotspot_sorting", 
   "Hotspot list sorting",
-  choices = list("Alphabetically", "Number of checklists"),
+  choices = list("Alphabetic", "Number of checklists"),
   selected = "Number of checklists"
 )
 
@@ -766,20 +768,22 @@ div(
 
 div(
   style = "margin-top: 15px",
+  "Use your personal eBird data",
+  br(),
   "1. ",
   a(
     "Download",
     href = "https://ebird.org/downloadMyData",
     target="_blank"
   ),
-  " personal eBird data"
+  " your eBird data"
 )
 
 tags$div(
   style = "margin-bottom: -10px; /* Adjust this value as needed */",
   fileInput(
     "upload",
-    "2. Import downloaded eBird data",
+    "2. Import your eBird data",
     accept = ".csv",
     buttonLabel = "Import...",
     multiple = FALSE,
@@ -802,9 +806,9 @@ verbatimTextOutput("imported_data_statistics")
 box1 = value_box(
   title = "Species",
   value = textOutput("total_species_text"),
-  #  showcase = bs_icon("feather"),
+#  showcase = bs_icon("feather"),
   theme = "primary",
-  fill = TRUE,
+  fill = FALSE,
   height = NULL
   #  style = 'background-color: #5092D0!important;')
 )
@@ -813,7 +817,7 @@ box2 = value_box(
   value = textOutput("total_checklists_text"),
   #  showcase = bs_icon("list-check"),
   theme = "primary",
-  fill = TRUE,
+  fill = FALSE,
   height = NULL
 )
 box3 = value_box(
@@ -822,7 +826,7 @@ box3 = value_box(
   #  showcase = bs_icon("trophy"),
   # theme = value_box_theme(bg = original_ebird_green, fg = "white")
   theme = "primary",
-  fill = TRUE,
+  fill = FALSE,
   height = NULL
 )
 box4 = value_box(
@@ -830,22 +834,25 @@ box4 = value_box(
   value = textOutput("total_time_text"),
   #  showcase = bs_icon("stopwatch"),
   theme = "primary",
-  fill = TRUE,
+  fill = FALSE,
   height = NULL
 )
 box5 = value_box(
   title = "Observations",
   value = textOutput("total_observations_text"),
   theme = "primary",
-  width = NULL
+  fill = FALSE,
+  height = NULL
 )
 layout_column_wrap(
+  fill = FALSE,
+  fillable = FALSE,
   width = 1/5,
   gap = "2px",
-  heights_equal = "all",
+  heights_equal = "row",
   box1, box2, box3, box4, box5,
-  height = "80px",
-  min_height = "80px"
+  height = "100px",
+  min_height = "100px"
   #  max_height = "250px"
 )
 
