@@ -3,13 +3,13 @@ This dashboard written in Quarto/R/Shiny allows a user to upload explore their p
 **IMPORTANT**: Requires your personal eBird data in a file named `MyEBirdData.csv`. Download your data [here](https://ebird.org/downloadMyData).
 
 ## Checklists
-![](checklists-screenshot.png)
+![](README-images/checklists-screenshot.png)
 
 ## Species
-![](species-screenshot.png)
+![](README-images/species-screenshot.png)
 
 ## Year List
-![](yearlist-screenshot.png)
+![](README-images/yearlist-screenshot.png)
 
 ## Map
-![](map-screenshot.png)
+![](README-images/map-screenshot.png)
