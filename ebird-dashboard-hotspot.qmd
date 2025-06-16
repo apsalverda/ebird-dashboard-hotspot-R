@@ -49,7 +49,7 @@ required_packages =
     "leaflet",
     "ggiraph",
     "formattable"
-    )
+  )
 missing_packages = required_packages[!sapply(required_packages, requireNamespace, quietly = TRUE)]
 if (length(missing_packages) > 0){
   stop(
@@ -57,7 +57,7 @@ if (length(missing_packages) > 0){
       "The following packages are required to run the dashboard:\n\n",
       paste0(missing_packages, collapse = ", "),
       "\n\nPlease make sure to install these packages before compiling the dashboard."
-      )
+    )
   )
 }
 
@@ -105,7 +105,7 @@ import_counter = reactiveVal(0)
 hotspot_latitude = reactiveVal(0)
 hotspot_longitude = reactiveVal(0)
 hotspot_name = reactiveVal("")
-years = reactiveVal()
+years = reactiveVal(list(NULL))
 
 ebird_dat = reactiveVal({
   read_ebird_data()
@@ -121,8 +121,19 @@ observeEvent(input$upload, {
   import_counter(import_counter() + 1)
   imported_dat = read_ebird_data(input$upload$datapath)
   ebird_dat(imported_dat)
+  years(as.numeric(as.character(sort(unique(imported_dat$year)))))
   earliest_date(min(imported_dat$date))
   latest_date(max(imported_dat$date))
+  updateSelectInput(
+    session,
+    "years_year_from",
+    choices = years()
+  )
+  updateSelectInput(
+    session,
+    "years_year_to",
+    choices = years()
+  )
   updateSliderInput(
     session,
     "date_range_slider",
@@ -169,6 +180,7 @@ selected_dat = reactive({
   }
   earliest_date(min(my_selected_dat$date))
   latest_date(max(my_selected_dat$date))
+  years(as.numeric(as.character(sort(unique(my_selected_dat$year)))))
   #  n_rows_data(nrow(selected_dat))
   #  n_checklists(selected_dat %>% distinct(submission_id) %>% nrow())
   my_selected_dat = my_selected_dat %>%
@@ -184,7 +196,7 @@ selected_dat = reactive({
   hotspot_latitude(top_lat_lng$latitude)
   hotspot_longitude(top_lat_lng$longitude)
   hotspot_name(top_lat_lng$location)
-  years(unique(my_selected_dat$year))
+  #  years(unique(my_selected_dat$year))
   # updateNumericInput(session, "year1", value = years()[1], min = years()[1], max = years()[length(years())])
   # updateNumericInput(session, "year2", value = years()[1], min = years()[1], max = years()[length(years())])
   return(my_selected_dat)
@@ -499,7 +511,7 @@ output$year1_table = DT::renderDT({
 
 output$year2_table = DT::renderDT({
   table_dat = 
-    selected_dat()%>% 
+    selected_dat() %>% 
     filter(year == input$year_list_slider[2]) %>% 
     group_by(common_name) %>%
     arrange(date) %>% 
@@ -521,6 +533,24 @@ output$year2_table = DT::renderDT({
         scrollY = ((input$pltChange$height - 122) * .50) - 148,
         pageLength = 10000
       )
+    )
+})
+
+output$total_time_birding = renderPlot({
+  selected_dat() |> 
+    distinct(year, submission_id, duration_min) |>
+    group_by(year) |> 
+    summarize(total_time_min = sum(duration_min, na.rm = TRUE)) |> 
+    mutate(total_time_hrs = total_time_min / 60) |> 
+    ggplot(aes(x = year, y = total_time_hrs)) + 
+    geom_col() +
+    labs(
+      x = "",
+      y = "Total time (hours)"
+    ) +
+    theme_gray(base_size = 14) +
+    theme(
+      panel.background = element_blank()
     )
 })
 
@@ -588,6 +618,16 @@ observeEvent(c(earliest_date(), latest_date()), {
     value = c(earliest_date(), latest_date()),
     timeFormat = "%b %Y"
   )
+  updateSelectInput(
+    session,
+    "years_year_from",
+    choices = years()
+  )
+  updateSelectInput(
+    session,
+    "years_year_to",
+    choices = years()
+  )
 }
 )
 
@@ -650,6 +690,7 @@ observeEvent(
     reactive_hotspot_values(hotspot_list)
     earliest_date(min(ebird_dat()$date))
     latest_date(max(ebird_dat()$date))
+    years(as.numeric(as.character(sort(unique(ebird_dat()$year)))))
     updateSelectInput(
       session,
       "hotspot",
@@ -806,7 +847,7 @@ verbatimTextOutput("imported_data_statistics")
 box1 = value_box(
   title = "Species",
   value = textOutput("total_species_text"),
-#  showcase = bs_icon("feather"),
+  #  showcase = bs_icon("feather"),
   theme = "primary",
   fill = FALSE,
   height = NULL
@@ -961,11 +1002,11 @@ div(
   sliderInput(
     "year_list_slider",
     "",
-    min = 2020,
-    max = 2025,
-    value =  c(2024, 2025),
+    min = min(years()),
+    max = max(years()),
+    value =  c(min(years()), max(years())),
     ticks = FALSE,
-    timeFormat = "%Y",
+    step = 1,
     sep = "",
     width = "100%"
   )
@@ -1010,20 +1051,44 @@ div(
 ::::
 ::::
 
-### Map
+<!-- ### Years -->
 
-```{r}
-leafletOutput(
-  "large_hotspot_map"#,
-  #    height = "200", 
-  #    width = "200"
-)
-```
+<!-- ```{r} -->
+<!-- selectInput( -->
+<!--   "years_year_from", -->
+<!--   "From", -->
+<!--   years(), -->
+<!--   multiple = FALSE, -->
+<!--   selectize = TRUE, -->
+<!--   width = "100px", -->
+<!--   size = NULL -->
+<!-- ) -->
+<!-- selectInput( -->
+<!--   "years_year_to", -->
+<!--   "To", -->
+<!--   years(), -->
+<!--   multiple = FALSE, -->
+<!--   selectize = TRUE, -->
+<!--   width = "100px", -->
+<!--   size = NULL -->
+<!-- ) -->
+<!-- plotOutput("total_time_birding") -->
+<!-- ``` -->
+
+<!-- ### Map -->
+
+<!-- ```{r} -->
+<!-- leafletOutput( -->
+<!--   "large_hotspot_map"#, -->
+<!--   #    height = "200",  -->
+<!--   #    width = "200" -->
+<!-- ) -->
+<!-- ``` -->
 
 ### Help
 
 ```{r}
 #p("Placeholder for text on the help tab.")
 div(a("eBird Best Practices", href = "https://support.ebird.org/en/support/solutions/articles/48000795623-ebird-rules-and-best-practices"),
-a("How to count birds", href = "https://support.ebird.org/en/support/solutions/articles/48000838845"))
+    a("How to count birds", href = "https://support.ebird.org/en/support/solutions/articles/48000838845"))
 ```
