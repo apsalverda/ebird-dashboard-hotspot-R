@@ -348,11 +348,11 @@ grid-auto-rows: minmax(0, 1fr);">
 <div id="date_range" class="shiny-date-range-input form-group shiny-input-container">
 <label class="control-label" id="date_range-label" for="date_range"></label>
 <div class="input-daterange input-group input-group-sm">
-<input class="form-control" type="text" aria-labelledby="date_range-label" title="Date format: mm/dd/yy" data-date-language="en" data-date-week-start="1" data-date-format="mm/dd/yy" data-date-start-view="month" data-min-date="2001-01-01" data-max-date="2012-12-21" data-initial-date="2001-01-01" data-date-autoclose="true">
+<input class="form-control" type="text" aria-labelledby="date_range-label" title="Date format: mm/dd  yyyy" data-date-language="en" data-date-week-start="1" data-date-format="mm/dd  yyyy" data-date-start-view="year" data-min-date="2001-01-01" data-max-date="2012-12-21" data-initial-date="2001-01-01" data-date-autoclose="true">
 <span class="input-group-addon input-group-prepend input-group-append">
 <span class="input-group-text">to</span>
 </span>
-<input class="form-control" type="text" aria-labelledby="date_range-label" title="Date format: mm/dd/yy" data-date-language="en" data-date-week-start="1" data-date-format="mm/dd/yy" data-date-start-view="month" data-min-date="2001-01-01" data-max-date="2012-12-21" data-initial-date="2010-12-31" data-date-autoclose="true">
+<input class="form-control" type="text" aria-labelledby="date_range-label" title="Date format: mm/dd  yyyy" data-date-language="en" data-date-week-start="1" data-date-format="mm/dd  yyyy" data-date-start-view="year" data-min-date="2001-01-01" data-max-date="2012-12-21" data-initial-date="2010-12-31" data-date-autoclose="true">
 </div>
 </div>
 </div>
@@ -404,6 +404,21 @@ if (!file.exists("MyEBirdData.csv")){
   stop("Cannot compile document. Missing required file \"MyEBirdData.csv\".\nPlease add this file with your personal eBird data to the folder from which you compile the document.")
 }
 
+if (TRUE == FALSE){
+  # KEEP THIS SECTION!
+  # SHINYAPPS.IO scans R code to figure out which packages it needs to install.
+  # It looks for 'library("[package]")' syntax, which this script does not use;
+  # it uses a loop (see below) to load packages.
+  library("tidyverse")
+  library("ggplot2")
+  library("shiny")
+  library("bslib")
+  library("bsicons")
+  library("leaflet")
+  library("ggiraph")
+  library("formattable")
+}
+
 required_packages =
   c(
     "tidyverse",
@@ -427,15 +442,6 @@ if (length(missing_packages) > 0){
 }
 
 invisible(lapply(required_packages, library, character.only = TRUE))
-
-# library(tidyverse)
-# library(ggplot2)
-# library(shiny)
-# library(bslib)
-# library(bsicons)
-# library(leaflet)
-# library(ggiraph)
-# library(formattable)
 
 original_ebird_green = "#2F7742"
 ebird_green = "#70c687"

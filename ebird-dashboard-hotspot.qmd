@@ -39,6 +39,21 @@ if (!file.exists("MyEBirdData.csv")){
   stop("Cannot compile document. Missing required file \"MyEBirdData.csv\".\nPlease add this file with your personal eBird data to the folder from which you compile the document.")
 }
 
+if (TRUE == FALSE){
+  # KEEP THIS SECTION!
+  # SHINYAPPS.IO scans R code to figure out which packages it needs to install.
+  # It looks for 'library("[package]")' syntax, which this script does not use;
+  # it uses a loop (see below) to load packages.
+  library("tidyverse")
+  library("ggplot2")
+  library("shiny")
+  library("bslib")
+  library("bsicons")
+  library("leaflet")
+  library("ggiraph")
+  library("formattable")
+}
+
 required_packages =
   c(
     "tidyverse",
@@ -62,15 +77,6 @@ if (length(missing_packages) > 0){
 }
 
 invisible(lapply(required_packages, library, character.only = TRUE))
-
-# library(tidyverse)
-# library(ggplot2)
-# library(shiny)
-# library(bslib)
-# library(bsicons)
-# library(leaflet)
-# library(ggiraph)
-# library(formattable)
 
 original_ebird_green = "#2F7742"
 ebird_green = "#70c687"
@@ -800,10 +806,10 @@ div(
     end    = "2010-12-31",
     min    = "2001-01-01",
     max    = "2012-12-21",
-    format = "mm/dd/yy",
+    format = "mm/dd  yyyy",
     weekstart = 1,
     separator = "to",
-    startview = "month"
+    startview = "year"
   )
 )
 
