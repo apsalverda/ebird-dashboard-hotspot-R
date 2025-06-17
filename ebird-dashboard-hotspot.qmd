@@ -469,25 +469,55 @@ output$data_preview = DT::renderDT({
       "last" = last_seen,
       "% checklists" = perc_checklists,
       "N checklists" = n_checklists
-    ) %>%
-    #     mutate(
-    #       # can be used to display scrollable height, for trouble shooting
-    #       height = input$pltChange$height,
-    #       scrolly = paste0(0.65 * (input$pltChange$height - 95 - 80), "px")
-    # ) %>%
+    )
+  n_rows = nrow(data_preview_table)
+  data_preview_table = 
+    data_preview_table |> 
     formattable() %>% 
     as.datatable(
       rownames = FALSE,
       options = list(
         dom = "ft",
         scrollY = ((input$pltChange$height - 122)) - 148,
-        pageLength = 10000
+        pageLength = n_rows
       )
     )
   # something in the above changes N checklists to character; fix for sorting
   data_preview_table$x$data$`N checklists` = as.numeric(data_preview_table$x$data$`N checklists`)
   return(data_preview_table)
 })
+
+output$data_observations = DT::renderDT({
+  n_rows = nrow(selected_dat())
+  observations_table =
+    selected_dat() %>%
+    arrange(date, time) %>%
+    select(date, count, common_name, location, submission_id) |>
+    #     mutate(
+    #       # can be used to display scrollable height, for trouble shooting
+    #       height = input$pltChange$height,
+    #       scrolly = paste0(0.65 * (input$pltChange$height - 95 - 80), "px")
+    # ) %>%
+    mutate(
+      count = ifelse(count == -1, "X", count),
+      submission_id = paste0("<a target='_blank' href='https://ebird.org/checklist/", submission_id,"'>", submission_id, "</a>")
+    ) |> 
+    formattable() |> 
+    as.datatable(
+      rownames = FALSE,
+      options = list(
+        dom = "t",
+        scrollY = ((input$pltChange$height - 122)) - 148,
+        pageLength = n_rows
+      ),
+      filter = list(
+        position = 'top', clear = FALSE
+      )
+    )
+  # # something in the above changes N checklists to character; fix for sorting
+  # data_preview_table$x$data$`N checklists` = as.numeric(data_preview_table$x$data$`N checklists`)
+  return(observations_table)
+}, server = TRUE)
 
 output$year1_table = DT::renderDT({
   table_dat = 
@@ -1057,6 +1087,15 @@ div(
 ::::
 ::::
 
+### Observations
+
+```{r}
+div(
+  DT::DTOutput("data_observations"),
+  style = "font-size: 80%"
+)
+```
+
 <!-- ### Years -->
 
 <!-- ```{r} -->
@@ -1095,6 +1134,6 @@ div(
 
 ```{r}
 #p("Placeholder for text on the help tab.")
-div(a("eBird Best Practices", href = "https://support.ebird.org/en/support/solutions/articles/48000795623-ebird-rules-and-best-practices"),
-    a("How to count birds", href = "https://support.ebird.org/en/support/solutions/articles/48000838845"))
+div(a("eBird Best Practices", href = "https://support.ebird.org/en/support/solutions/articles/48000795623-ebird-rules-and-best-practices", target = "_blank"),
+    a("How to count birds", href = "https://support.ebird.org/en/support/solutions/articles/48000838845", target = "_blank"))
 ```
