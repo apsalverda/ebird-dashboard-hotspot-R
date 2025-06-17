@@ -304,7 +304,38 @@ grid-auto-rows: minmax(0, 1fr);">
 <div class="card-body html-fill-item html-fill-container">
 <div class="cell-output-display html-fill-item html-fill-container">
 <div class="html-fill-item html-fill-container">
-<a href="https://support.ebird.org/en/support/solutions/articles/48000795623-ebird-rules-and-best-practices" target="_blank">eBird Best Practices</a>
+<h3>Sidebar</h3>
+<p>The arrow in the top right of the sidebar allows you to close and reopen the sidebar.</p>
+<strong>Hotspot</strong>
+<p>The dashboard shows data for the hotspot selected. You can select a hotspot by selecting one from the list, but also by typing (part of) its name in the Hotspot box. The hotspots are either sorted alphabetically by name, or by the total number of checklists associated with each hotspot (in descending order). This can be controlled using the “Hotspot list sorting” setting.</p>
+<strong>Season colors</strong>
+<p>This setting controls the season colors in the graph on the Checklists tab.</p>
+<strong>Date range</strong>
+<p>By default, the dashboard uses all your data. You can limit the data it uses by moving the date range slider (which moves the start and ending dates in increments of about 1 month) or by clicking on the start or ending date and selecting a specific year, month and day of the month.</p>
+<strong>Import</strong>
+<p>
+You can use the “Import…” button to load your personal eBird data if you have stored those locally on your machine. You can download your personal data 
+<a href="https://ebird.org/downloadMyData" target="_blank">here</a>
+.
+</p>
+<p>By default, the dashboard displays my personal ebird data. If you have cloned my code and are compiling the dashboard locally on your machine, you can replace my data permanently by moving your “MyEBirdData.csv” file to the folder where the dashboard code is stored.</p>
+<h3>Tabs</h3>
+<strong>Checklists</strong>
+<p>Each dot in this data visualization represents one checklist. The horizontal axis indicates the checklist date, and the vertical axis indicates the total number of species reported for that checklist. The season is indicated by color: blue for winter, green for spring, yellow for summer, and orange for fall. By default, the colors align with the seasons of the Northern hemisphere. You can modify this by changing the “Season colors” setting to Southern hemisphere.</p>
+<p>A summary of each checklist, including its location, can be gleaned by hovering the mouse cursor over a dot in the graph. Clicking the dot will open a new tab with the checklist in eBird.</p>
+<strong>Species</strong>
+<p>This table shows, for each species that you have reported: when you first reported it; when you last reported it; the percentage of your checklists on which the species occurs; the total number of your checklists on which the species occurs.</p>
+<p>The Search box can be used to quickly navigate to data for a specific species. It can also be used to compare data for a group of birds with similar names. For instance, searching for “sparrow” will return a list of species whose name includes the word “sparrow”.</p>
+<p>Each column can be sorted in ascending or descending order by clicking its name.</p>
+<strong>Year list</strong>
+<p>This tab allows you to compare data for two specific calendar years. The graph shows the cumulative number of unique species reported throughout the year, with the most recent year indicated in blue. Each table lists the total number of species reported, and the date at which a species was first reported.</p>
+<strong>Observations</strong>
+<p>This table shows data for each checklist observation. (Note that the table may load a bit slowly if you are looking at a lot of observations.) Each column can be sorted in ascending or descending order by clicking its name. Each column can also be filtered; for instance, you can enter a species in the “Common name” column to see only observations for that species.</p>
+<p>Clicking on the “Checklist ID” will open a new tab with the checklist in eBird.</p>
+<strong>Map</strong>
+<p>The map shows a satellite image of the hotspot(s) that you selected. Clicking on the tool in the bottom left corner of the map allows you to zoom in and out.</p>
+<h3>Helpful eBird information</h3>
+<a href="https://support.ebird.org/en/support/solutions/articles/48000795623-ebird-rules-and-best-practices" target="_blank">Best practices</a>
 <a href="https://support.ebird.org/en/support/solutions/articles/48000838845" target="_blank">How to count birds</a>
 </div>
 </div>
@@ -843,11 +874,11 @@ output$data_preview = DT::renderDT({
     select(-c(first_seen_checklist, last_seen_checklist)) %>% 
     arrange(desc(perc_checklists)) %>% 
     rename(
-      "species" = common_name,
-      "first" = first_seen,
-      "last" = last_seen,
-      "% checklists" = perc_checklists,
-      "N checklists" = n_checklists
+      "Species" = common_name,
+      "First" = first_seen,
+      "Last" = last_seen,
+      "% Checklists" = perc_checklists,
+      "N Checklists" = n_checklists
     )
   n_rows = nrow(data_preview_table)
   data_preview_table = 
@@ -862,7 +893,7 @@ output$data_preview = DT::renderDT({
       )
     )
   # something in the above changes N checklists to character; fix for sorting
-  data_preview_table$x$data$`N checklists` = as.numeric(data_preview_table$x$data$`N checklists`)
+  data_preview_table$x$data$`N Checklists` = as.numeric(data_preview_table$x$data$`N Checklists`)
   return(data_preview_table)
 })
 
@@ -880,6 +911,13 @@ output$data_observations = DT::renderDT({
     mutate(
       count = ifelse(count == -1, "X", count),
       submission_id = paste0("<a target='_blank' href='https://ebird.org/checklist/", submission_id,"'>", submission_id, "<\u002fa>")
+    ) |> 
+    rename(
+      "Date" = date,
+      "Count" = count,
+      "Common name" = common_name,
+      "Location" = location,
+      "Checklist ID" = submission_id
     ) |> 
     formattable() |> 
     as.datatable(
