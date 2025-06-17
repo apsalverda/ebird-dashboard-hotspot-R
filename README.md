@@ -11,5 +11,8 @@ This dashboard, written in Quarto/R/Shiny, allows a user to upload and explore t
 ## Year List
 ![](README-images/yearlist-screenshot.png)
 
+## Observations
+![](README-images/observations-screenshot.png)
+
 ## Map
 ![](README-images/map-screenshot.png)
