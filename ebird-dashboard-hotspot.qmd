@@ -1120,15 +1120,15 @@ div(
 <!-- plotOutput("total_time_birding") -->
 <!-- ``` -->
 
-<!-- ### Map -->
+### Map
 
-<!-- ```{r} -->
-<!-- leafletOutput( -->
-<!--   "large_hotspot_map"#, -->
-<!--   #    height = "200",  -->
-<!--   #    width = "200" -->
-<!-- ) -->
-<!-- ``` -->
+```{r}
+leafletOutput(
+  "large_hotspot_map"#,
+  #    height = "200",
+  #    width = "200"
+)
+```
 
 ### Help
 
