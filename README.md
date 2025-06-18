@@ -16,3 +16,6 @@ This dashboard, written in Quarto/R/Shiny, allows a user to upload and explore t
 
 ## Map
 ![](README-images/map-screenshot.png)
+
+## Help
+![](README-images/help-screenshot.png)
