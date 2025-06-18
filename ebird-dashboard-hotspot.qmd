@@ -492,7 +492,7 @@ output$data_observations = DT::renderDT({
   observations_table =
     selected_dat() %>%
     arrange(date, time) %>%
-    select(date, count, common_name, location, submission_id) |>
+    select(date, count, common_name, location, submission_id, observation_details) |>
     #     mutate(
     #       # can be used to display scrollable height, for trouble shooting
     #       height = input$pltChange$height,
@@ -500,6 +500,7 @@ output$data_observations = DT::renderDT({
     # ) %>%
     mutate(
       count = ifelse(count == -1, "X", count),
+      observation_details = ifelse(is.na(observation_details), "", observation_details),
       submission_id = paste0("<a target='_blank' href='https://ebird.org/checklist/", submission_id,"'>", submission_id, "</a>")
     ) |> 
     rename(
@@ -507,6 +508,7 @@ output$data_observations = DT::renderDT({
       "Count" = count,
       "Common name" = common_name,
       "Location" = location,
+      "Comments" = observation_details,
       "Checklist ID" = submission_id
     ) |> 
     formattable() |> 

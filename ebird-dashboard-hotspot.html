@@ -385,7 +385,7 @@ You can use the “Import…” button to load your personal eBird data if you h
 <div style="display: none;">Slider</div>
 <div class="form-group shiny-input-container no-baseline">
 <label class="control-label" id="date_range_slider-label" for="date_range_slider"></label>
-<input class="js-range-slider" id="date_range_slider" data-skin="shiny" data-type="double" data-min="1742342400000" data-max="1750118400000" data-from="1747526400000" data-to="1750118400000" data-step="86400000" data-grid="false" data-grid-snap="false" data-prettify-separator="," data-prettify-enabled="true" data-keyboard="true" data-drag-interval="true" data-data-type="date" data-time-format="%b %Y">
+<input class="js-range-slider" id="date_range_slider" data-skin="shiny" data-type="double" data-min="1742428800000" data-max="1750204800000" data-from="1747612800000" data-to="1750204800000" data-step="86400000" data-grid="false" data-grid-snap="false" data-prettify-separator="," data-prettify-enabled="true" data-keyboard="true" data-drag-interval="true" data-data-type="date" data-time-format="%b %Y">
 </div>
 </div>
 </div>
@@ -902,7 +902,7 @@ output$data_observations = DT::renderDT({
   observations_table =
     selected_dat() %>%
     arrange(date, time) %>%
-    select(date, count, common_name, location, submission_id) |>
+    select(date, count, common_name, location, submission_id, observation_details) |>
     #     mutate(
     #       # can be used to display scrollable height, for trouble shooting
     #       height = input$pltChange$height,
@@ -910,6 +910,7 @@ output$data_observations = DT::renderDT({
     # ) %>%
     mutate(
       count = ifelse(count == -1, "X", count),
+      observation_details = ifelse(is.na(observation_details), "", observation_details),
       submission_id = paste0("<a target='_blank' href='https://ebird.org/checklist/", submission_id,"'>", submission_id, "<\u002fa>")
     ) |> 
     rename(
@@ -917,6 +918,7 @@ output$data_observations = DT::renderDT({
       "Count" = count,
       "Common name" = common_name,
       "Location" = location,
+      "Comments" = observation_details,
       "Checklist ID" = submission_id
     ) |> 
     formattable() |> 
