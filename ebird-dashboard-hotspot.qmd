@@ -517,7 +517,15 @@ output$data_observations = DT::renderDT({
       options = list(
         dom = "t",
         scrollY = ((input$pltChange$height - 122)) - 148,
-        pageLength = n_rows
+        pageLength = n_rows,
+        columnDefs = list(
+          list(width = '12', targets = 0),
+          list(width = '8%', targets = 1),
+          list(width = '20%', targets = 2),
+          list(width = '25%', targets = 3),
+          list(width = '8%', targets = 4),
+          list(width = '27%', targets = 5)
+        )
       ),
       filter = list(
         position = 'top', clear = FALSE
