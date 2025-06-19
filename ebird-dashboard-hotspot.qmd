@@ -291,11 +291,11 @@ output$imported_data_statistics = renderText({
     "",
     paste0(
       "\nImported: \n ",
-      n_rows_data(),
+      n_rows_data() |> format(big.mark = ","),
       " observations\n ",
-      n_checklists(),
+      n_checklists() |> format(big.mark = ","),
       " checklists\n ",
-      n_species(),
+      n_species() |> format(big.mark = ","),
       " species"
     )
   )
@@ -845,7 +845,7 @@ div(
 
 div(
   tags$style(".form-control, .input-group-addon {padding: 0px 0px 0px 0px !important;}"),
-  style = "display: inline-block; padding-top: 0px; margin-bottom: 0px; margin-top: -20px",
+  style = "display: inline-block; padding-top: 0px; margin-bottom: 0px; margin-top: -20px; text-align: center",
   dateRangeInput(
     "date_range", 
     "",
@@ -860,33 +860,45 @@ div(
   )
 )
 
-div(
-  style = "margin-top: 15px",
-  "Use your personal eBird data",
-  br(),
-  "1. ",
-  a(
-    "Download",
-    href = "https://ebird.org/downloadMyData",
-    target="_blank"
-  ),
-  " your eBird data"
-)
+# div(
+#   style = "margin-top: 15px",
+#   "Use your personal eBird data",
+#   br(),
+#   "1. ",
+#   a(
+#     "Download",
+#     href = "https://ebird.org/downloadMyData",
+#     target="_blank"
+#   ),
+#   " your eBird data"
+# )
 
 tags$div(
-  style = "margin-bottom: -10px; /* Adjust this value as needed */",
+  style = "margin-top: 5px; margin-bottom: -10px;",
   fileInput(
     "upload",
-    "2. Import your eBird data",
+    "",
+    #    "2. Import your eBird data",
     accept = ".csv",
-    buttonLabel = "Import...",
+    buttonLabel = "Import data",
     multiple = FALSE,
     placeholder = "",
     width = "100%"
   )
 )
-#verbatimTextOutput("import_filename")
+
 verbatimTextOutput("imported_data_statistics")
+
+tags$div(
+  style = "margin-top: 0px",
+  actionButton(
+    inputId = 'ab1',
+    class = "custom-download-button",
+    label = "Download your eBird data", 
+    onclick = "window.open('https://ebird.org/downloadMyData', '_blank')"
+  )
+)
+
 
 #hr()
 ```

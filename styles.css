@@ -8,6 +8,49 @@
     }
 */
 
+/* "to" element of date range element (the separator) */
+.input-daterange .input-group-text {
+    font-size: 14px !important;
+  }
+
+/* download button */
+.custom-download-button {
+      width: 100% !important;
+      border-color: #cccccc !important;
+      border-radius: 4px !important;
+      font-size: 14px !important;
+      color: black !important;
+      background-color: white !important;
+}
+
+/* buttonLabel of fileInput element */
+.btn-file {
+      border-color: #cccccc !important;
+      border-radius: 4px !important;
+      background-color: white !important;
+      color: black !important;
+      border: 1px solid #ccc !important;
+      font-size: 14px !important;
+    }
+
+/* filename of fileInput element */
+.form-control {
+      border-color: #cccccc !important;
+      border-radius: 4px !important;
+      font-size: 14px !important;
+      text-align: left !important;
+    }
+
+/* fileInput progress bar */
+.progress-bar {
+      color: black !important;
+      background-color: #dce1e6 !important;
+}
+
+.form-control {
+      text-align: center !important;
+}
+
 .columns-container {
   height: 80vh;
   overflow: hidden;

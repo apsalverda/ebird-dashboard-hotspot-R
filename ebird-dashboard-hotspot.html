@@ -32,7 +32,7 @@ ul.task-list li input[type="checkbox"] {
 <link href="ebird-dashboard-hotspot_files/libs/quarto-html/quarto-syntax-highlighting-2f5df379a58b258e96c21c0638c20c03.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="ebird-dashboard-hotspot_files/libs/bootstrap/bootstrap.min.js"></script>
 <link href="ebird-dashboard-hotspot_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="ebird-dashboard-hotspot_files/libs/bootstrap/bootstrap-54026efbd782de45e4eb95f38d7bd26e.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="ebird-dashboard-hotspot_files/libs/bootstrap/bootstrap-ef8034bfe3f143773f75884b4f86e2e7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script src="ebird-dashboard-hotspot_files/libs/quarto-dashboard/quarto-dashboard.js"></script>
 <script src="ebird-dashboard-hotspot_files/libs/quarto-dashboard/stickythead.js"></script>
 <script src="ebird-dashboard-hotspot_files/libs/quarto-dashboard/datatables.min.js" kdttablesentinel="true"></script>
@@ -385,12 +385,12 @@ You can use the “Import…” button to load your personal eBird data if you h
 <div style="display: none;">Slider</div>
 <div class="form-group shiny-input-container no-baseline">
 <label class="control-label" id="date_range_slider-label" for="date_range_slider"></label>
-<input class="js-range-slider" id="date_range_slider" data-skin="shiny" data-type="double" data-min="1742428800000" data-max="1750204800000" data-from="1747612800000" data-to="1750204800000" data-step="86400000" data-grid="false" data-grid-snap="false" data-prettify-separator="," data-prettify-enabled="true" data-keyboard="true" data-drag-interval="true" data-data-type="date" data-time-format="%b %Y">
+<input class="js-range-slider" id="date_range_slider" data-skin="shiny" data-type="double" data-min="1742515200000" data-max="1750291200000" data-from="1747699200000" data-to="1750291200000" data-step="86400000" data-grid="false" data-grid-snap="false" data-prettify-separator="," data-prettify-enabled="true" data-keyboard="true" data-drag-interval="true" data-data-type="date" data-time-format="%b %Y">
 </div>
 </div>
 </div>
 <div class="cell-output-display">
-<div style="display: inline-block; padding-top: 0px; margin-bottom: 0px; margin-top: -20px">
+<div style="display: inline-block; padding-top: 0px; margin-bottom: 0px; margin-top: -20px; text-align: center">
 <style>.form-control, .input-group-addon {padding: 0px 0px 0px 0px !important;}</style>
 <div id="date_range" class="shiny-date-range-input form-group shiny-input-container">
 <label class="control-label" id="date_range-label" for="date_range"></label>
@@ -405,22 +405,13 @@ You can use the “Import…” button to load your personal eBird data if you h
 </div>
 </div>
 <div class="cell-output-display">
-<div style="margin-top: 15px">
-Use your personal eBird data
-<br>
-1. 
-<a href="https://ebird.org/downloadMyData" target="_blank">Download</a>
- your eBird data
-</div>
-</div>
-<div class="cell-output-display">
-<div style="margin-bottom: -10px; /* Adjust this value as needed */">
+<div style="margin-top: 5px; margin-bottom: -10px;">
 <div class="form-group shiny-input-container" style="width:100%;">
-<label class="control-label" id="upload-label" for="upload">2. Import your eBird data</label>
+<label class="control-label" id="upload-label" for="upload"></label>
 <div class="input-group">
 <label class="input-group-btn input-group-prepend">
 <span class="btn btn-default btn-file">
-Import...
+Import data
 <input id="upload" class="shiny-input-file" name="upload" type="file" style="position: absolute !important; top: -99999px !important; left: -99999px !important;" accept=".csv">
 </span>
 </label>
@@ -434,6 +425,11 @@ Import...
 </div>
 <div class="cell-output-display">
 <pre class="shiny-text-output noplaceholder" id="imported_data_statistics"></pre>
+</div>
+<div class="cell-output-display">
+<div style="margin-top: 0px">
+<button class="btn btn-default action-button custom-download-button" id="ab1" onclick="window.open('https://ebird.org/downloadMyData', '_blank')" type="button">Download your eBird data</button>
+</div>
 </div>
 </div></aside>
 <button class="collapse-toggle" type="button" title="Toggle sidebar" aria-expanded="true" aria-controls="bslib-sidebar-1">
@@ -701,11 +697,11 @@ output$imported_data_statistics = renderText({
     "",
     paste0(
       "\nImported: \n ",
-      n_rows_data(),
+      n_rows_data() |> format(big.mark = ","),
       " observations\n ",
-      n_checklists(),
+      n_checklists() |> format(big.mark = ","),
       " checklists\n ",
-      n_species(),
+      n_species() |> format(big.mark = ","),
       " species"
     )
   )
