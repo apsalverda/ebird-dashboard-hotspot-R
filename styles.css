@@ -11,6 +11,7 @@
 /* "to" element of date range element (the separator) */
 .input-daterange .input-group-text {
     font-size: 14px !important;
+    justify-content: center !important;
   }
 
 /* download button */
@@ -110,13 +111,22 @@
     /* ion range slider */
     .irs--shiny {
         .irs-handle {
-            background-color: darkgray;
+            background-color: white;
             width: 12px;
             height: 12px;
             top: 23px
         }
 
+        .irs-handle:hover {
+            background-color: white;
+        }
+
         .irs-from {
+            color: black;
+            background: transparent
+        }
+
+        .irs-to {
             color: black;
             background: transparent
         }
@@ -135,21 +145,11 @@
 
         .irs-line {
             background-color: black;
-            height: 1px;
-            top: 28px
+            height: 6px;
+            top: 26px
         }
 
         .irs-single {
-            color: black;
-            background: transparent
-        }
-
-        .irs-from {
-            color: black;
-            background: transparent
-        }
-
-        .irs-to {
             color: black;
             background: transparent
         }
