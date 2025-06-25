@@ -8,6 +8,12 @@
     }
 */
 
+
+/* value_box elements */
+.bslib-value-box {
+  border-radius: 10px !important;
+}
+
 /* "to" element of date range element (the separator) */
 .input-daterange .input-group-text {
     font-size: 14px !important;

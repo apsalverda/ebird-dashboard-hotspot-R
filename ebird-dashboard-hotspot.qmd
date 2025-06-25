@@ -63,7 +63,9 @@ required_packages =
     "bsicons",
     "leaflet",
     "ggiraph",
-    "formattable"
+    "formattable",
+    "DT",
+    "janitor"
   )
 missing_packages = required_packages[!sapply(required_packages, requireNamespace, quietly = TRUE)]
 if (length(missing_packages) > 0){
