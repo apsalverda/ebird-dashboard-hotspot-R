@@ -151,3 +151,50 @@ year_list_ecdf = function(my_data, year_from = 2025, year_to = 2025){
       plot.margin = margin(0, 10, 0, 0, "pt")
     )
 }
+
+my_rects = function(my_plot){
+  # generated vertical bands for seasons, for the Checklist plot
+  rect_colors = c("white", "lightgray")
+  alpha_level = .1
+  rect_tibble = tibble()
+  min_x = as.Date(layer_scales(my_plot)$x$get_limits()[1])
+  max_x = as.Date(layer_scales(my_plot)$x$get_limits()[2])
+  min_y = layer_scales(my_plot)$y$get_limits()[1]
+  max_y = layer_scales(my_plot)$y$get_limits()[2]
+  current_date = min_x
+  rect_start_date = min_x
+  rect_number = 1
+  while(current_date < max_x){
+    current_date = current_date + 1
+    if (month(current_date) %in% c(3, 6, 9, 12) & day(current_date) == 1){
+      rect_tibble =
+        bind_rows(
+          rect_tibble,
+          tibble(
+            xmin = rect_start_date,
+            xmax = current_date,
+            ymin = min_y,
+            ymax = max_y,
+            fill = rect_colors[1 + rect_number %% 2],
+            alpha = alpha_level
+          )
+        )
+      rect_start_date = current_date
+      rect_number = rect_number + 1
+      print(rect_colors[rect_number %% 2])
+    }
+  }
+  rect_tibble =
+    bind_rows(
+      rect_tibble,
+      tibble(
+        xmin = rect_start_date,
+        xmax = current_date,
+        ymin = min_y,
+        ymax = max_y,
+        fill = rect_colors[1 + rect_number %% 2],
+        alpha = alpha_level
+      )
+    )
+  return(rect_tibble)
+}

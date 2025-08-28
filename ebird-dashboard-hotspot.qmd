@@ -387,6 +387,16 @@ output$species_count_plot = renderGirafe({
         )
     }
   }
+  plot = 
+    plot +
+    geom_rect(
+    data = my_rects(plot),
+    aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, fill = fill, alpha = alpha),
+    inherit.aes = FALSE
+  ) +
+  scale_fill_identity(guide = "none") +
+  scale_alpha_identity(guide = "none")
+
   # avoid fractions on the Y axis
   # y_axis_breaks = layer_scales(plot)$y$break_positions()
   # y_axis_breaks = y_axis_breaks[!is.na(y_axis_breaks)]
@@ -493,7 +503,7 @@ output$data_observations = DT::renderDT({
   n_rows = nrow(selected_dat())
   observations_table =
     selected_dat() %>%
-    arrange(date, time) %>%
+    arrange(desc(date), desc(time)) %>%
     select(date, count, common_name, location, submission_id, observation_details) |>
     #     mutate(
     #       # can be used to display scrollable height, for trouble shooting
