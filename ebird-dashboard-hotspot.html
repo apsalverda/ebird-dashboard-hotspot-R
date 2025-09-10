@@ -350,6 +350,31 @@ You can use the “Import…” button to load your personal eBird data if you h
 </div>
 </div>
 </div></div><aside id="bslib-sidebar-1" class="sidebar html-fill-container html-fill-item"><div class="html-fill-container html-fill-item">
+<div class="cell-output-display">
+<div id="observation_types" class="form-group shiny-input-checkboxgroup shiny-input-container" role="group" aria-labelledby="observation_types-label">
+<label class="control-label" id="observation_types-label" for="observation_types">Observation type</label>
+<div class="shiny-options-group">
+<div class="checkbox">
+<label>
+<input type="checkbox" name="observation_types" value="Traveling Count" checked="checked">
+<span>Traveling Count</span>
+</label>
+</div>
+<div class="checkbox">
+<label>
+<input type="checkbox" name="observation_types" value="Stationary Count">
+<span>Stationary Count</span>
+</label>
+</div>
+<div class="checkbox">
+<label>
+<input type="checkbox" name="observation_types" value="Casual Observation">
+<span>Casual Observation</span>
+</label>
+</div>
+</div>
+</div>
+</div>
 <div class="cell-output-display no-overflow-x">
 <div class="form-group shiny-input-container">
 <label class="control-label" id="hotspot-label" for="hotspot">Hotspot</label>
@@ -385,7 +410,7 @@ You can use the “Import…” button to load your personal eBird data if you h
 <div style="display: none;">Slider</div>
 <div class="form-group shiny-input-container no-baseline">
 <label class="control-label" id="date_range_slider-label" for="date_range_slider"></label>
-<input class="js-range-slider" id="date_range_slider" data-skin="shiny" data-type="double" data-min="1743033600000" data-max="1750809600000" data-from="1748217600000" data-to="1750809600000" data-step="86400000" data-grid="false" data-grid-snap="false" data-prettify-separator="," data-prettify-enabled="true" data-keyboard="true" data-drag-interval="true" data-data-type="date" data-time-format="%b %Y">
+<input class="js-range-slider" id="date_range_slider" data-skin="shiny" data-type="double" data-min="1749686400000" data-max="1757462400000" data-from="1754870400000" data-to="1757462400000" data-step="86400000" data-grid="false" data-grid-snap="false" data-prettify-separator="," data-prettify-enabled="true" data-keyboard="true" data-drag-interval="true" data-data-type="date" data-time-format="%b %Y">
 </div>
 </div>
 </div>
@@ -556,31 +581,29 @@ observeEvent(input$upload, {
     value = c(earliest_date(), latest_date()),
     timeFormat = "%b %Y"
   )
-  # NOTE: the data range input object gets updated automatically
-  # updateDateRangeInput(
-  #   session,
-  #   "date_range",
-  #   start = earliest_date(),
-  #   end = latest_date(),
-  #   min = earliest_date(),
-  #   max = latest_date()
-  # )
+  updateDateRangeInput(
+    session,
+    "date_range",
+    start = earliest_date(),
+    end = latest_date(),
+    min = earliest_date(),
+    max = latest_date()
+  )
   n_rows_data(nrow(imported_dat))
   n_checklists(
     imported_dat %>%
-      #        filter(protocol != "eBird - Casual Observation") %>%
       distinct(submission_id) %>%
       nrow()
   )
   n_species(
     imported_dat %>% 
-      #        filter(protocol != "eBird - Casual Observation") %>%
       distinct(common_name) %>%
       nrow())
 })
 
 selected_dat = reactive({
   req(input$hotspot)
+  req(input$observation_types)
   if (input$hotspot == "All"){
     # user has selected all hotspots
     my_selected_dat = ebird_dat()
@@ -597,11 +620,14 @@ selected_dat = reactive({
   years(as.numeric(as.character(sort(unique(my_selected_dat$year)))))
   #  n_rows_data(nrow(selected_dat))
   #  n_checklists(selected_dat %>% distinct(submission_id) %>% nrow())
+  ebird_observation_types = paste0("eBird - ", input$observation_types)
   my_selected_dat = my_selected_dat %>%
     filter(
       date >= input$date_range[1],
       date <= input$date_range[2]
-    )
+    ) %>%
+    filter(protocol %in% ebird_observation_types)
+
   earliest_year(min(as.numeric(as.character(my_selected_dat$year))))
   latest_year(max(as.numeric(as.character(my_selected_dat$year))))
   top_lat_lng =
@@ -699,11 +725,11 @@ output$imported_data_statistics = renderText({
     "",
     paste0(
       "\nImported: \n ",
-      n_rows_data() |> format(big.mark = ","),
+      n_rows_data() %>% format(big.mark = ","),
       " observations\n ",
-      n_checklists() |> format(big.mark = ","),
+      n_checklists() %>% format(big.mark = ","),
       " checklists\n ",
-      n_species() |> format(big.mark = ","),
+      n_species() %>% format(big.mark = ","),
       " species"
     )
   )
@@ -753,7 +779,7 @@ output$species_count_plot = renderGirafe({
     ) +
     labs(
       #      title = "Total species reported by checklist",
-      subtitle = "Note: Clicking on a data point opens the checklist in eBird",
+      subtitle = "Note: Horizontal bar indicates median species count by season. Click on a dot to open the checklist in eBird.",
       x = "",
       y = "Total species reported"
     ) +
@@ -768,16 +794,16 @@ output$species_count_plot = renderGirafe({
         margin = margin(t = 0, r = 0, b = 15, l = 0)
       )
     )
-  if(input$season_coloring =="None"){
+  if(input$season_coloring == "None"){
     plot = 
       plot +
       scale_color_manual(
         # 636363
-        values = c("#707070", "#707070", "#707070", "#707070"),
+        values = rep("#707070", 4),
         guide = "none"
       )
   } else {
-    if(input$season_coloring =="Southern hemisphere"){
+    if(input$season_coloring == "Southern hemisphere"){
       plot = 
         plot +
         scale_color_manual(
@@ -793,6 +819,91 @@ output$species_count_plot = renderGirafe({
         )
     }
   }
+  plot = 
+    plot +
+    geom_rect(
+      data = my_rects(plot),
+      aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, fill = fill, alpha = alpha),
+      inherit.aes = FALSE
+    ) +
+    scale_fill_identity(guide = "none") +
+    scale_alpha_identity(guide = "none")
+  
+  # median counts by season by year
+  plot_min_x = as.Date(layer_scales(plot)$x$get_limits()[1])
+  plot_max_x = as.Date(layer_scales(plot)$x$get_limits()[2])
+
+  median_counts_by_season = 
+    selected_dat() %>% 
+    count(submission_id, location, date, us_season) %>% 
+    mutate(year = year(date)) %>%
+    select(year, us_season, date, n) %>% 
+    full_join(
+      tibble(
+        date = seq.Date(plot_min_x, plot_max_x, by = "day")),
+      by = "date"
+    ) %>% 
+    arrange(date) %>% 
+    mutate(
+      year = year(date),
+      month = month(date),
+      us_season = case_when(
+        month < 3 | month == 12~ "winter",
+        month < 6 ~ "spring",
+        month < 9 ~ "summer",
+        month < 12 ~ "fall",
+        TRUE ~ NA
+      )
+    ) %>% 
+    mutate(
+      new_segment = 
+        case_when(
+          row_number() == 1 ~ TRUE,
+          us_season != lag(us_season) ~ TRUE,
+          TRUE ~ FALSE
+        ),
+      segment = cumsum(new_segment)
+    ) %>% 
+    group_by(segment, us_season) %>% 
+    mutate(median_count = median(n, na.rm = TRUE)) %>% 
+    slice(1, n()) %>% 
+    select(segment, us_season, date, median_count) %>% 
+    arrange(date) %>%
+    mutate(
+      color = case_when(
+        input$season_coloring == "None" ~ "#707070",
+        TRUE ~ "#000000"
+      )
+    )
+  
+  segments_tibble = tibble(
+    x = median_counts_by_season %>%
+      filter(row_number() == 1) %>% 
+      pull(date),
+    y = median_counts_by_season %>% 
+      distinct(segment, us_season, median_count) %>% 
+      pull(median_count),
+    xend = median_counts_by_season %>%
+      filter(row_number() == 2) %>% 
+      pull(date),
+    yend = median_counts_by_season %>% 
+      distinct(segment, us_season, median_count) %>% 
+      pull(median_count),
+    us_season = median_counts_by_season %>% 
+      distinct(segment, us_season) %>% 
+      pull(us_season)
+  )
+  
+  plot = 
+    plot +
+    geom_segment(
+      data = segments_tibble,
+      aes(x = x, y = y, xend = xend, yend = yend, color = us_season),
+      alpha = .3,
+      size = 3,
+      inherit.aes = FALSE
+    ) + labs(title = plot_min_x)
+    
   # avoid fractions on the Y axis
   # y_axis_breaks = layer_scales(plot)$y$break_positions()
   # y_axis_breaks = y_axis_breaks[!is.na(y_axis_breaks)]
@@ -880,7 +991,7 @@ output$data_preview = DT::renderDT({
     )
   n_rows = nrow(data_preview_table)
   data_preview_table = 
-    data_preview_table |> 
+    data_preview_table %>% 
     formattable() %>% 
     as.datatable(
       rownames = FALSE,
@@ -899,8 +1010,8 @@ output$data_observations = DT::renderDT({
   n_rows = nrow(selected_dat())
   observations_table =
     selected_dat() %>%
-    arrange(date, time) %>%
-    select(date, count, common_name, location, submission_id, observation_details) |>
+    arrange(desc(date), desc(time)) %>%
+    select(date, count, common_name, location, submission_id, observation_details) %>%
     #     mutate(
     #       # can be used to display scrollable height, for trouble shooting
     #       height = input$pltChange$height,
@@ -910,7 +1021,7 @@ output$data_observations = DT::renderDT({
       count = ifelse(count == -1, "X", count),
       observation_details = ifelse(is.na(observation_details), "", observation_details),
       submission_id = paste0("<a target='_blank' href='https://ebird.org/checklist/", submission_id,"'>", submission_id, "<\u002fa>")
-    ) |> 
+    ) %>% 
     rename(
       "Date" = date,
       "Count" = count,
@@ -918,8 +1029,8 @@ output$data_observations = DT::renderDT({
       "Location" = location,
       "Comments" = observation_details,
       "Checklist ID" = submission_id
-    ) |> 
-    formattable() |> 
+    ) %>% 
+    formattable() %>% 
     as.datatable(
       rownames = FALSE,
       options = list(
@@ -998,11 +1109,11 @@ output$year2_table = DT::renderDT({
 })
 
 output$total_time_birding = renderPlot({
-  selected_dat() |> 
-    distinct(year, submission_id, duration_min) |>
-    group_by(year) |> 
-    summarize(total_time_min = sum(duration_min, na.rm = TRUE)) |> 
-    mutate(total_time_hrs = total_time_min / 60) |> 
+  selected_dat() %>% 
+    distinct(year, submission_id, duration_min) %>%
+    group_by(year) %>% 
+    summarize(total_time_min = sum(duration_min, na.rm = TRUE)) %>% 
+    mutate(total_time_hrs = total_time_min / 60) %>% 
     ggplot(aes(x = year, y = total_time_hrs)) + 
     geom_col() +
     labs(
@@ -1177,17 +1288,17 @@ observeEvent(
   })
 
 # for trouble shooting
-output$testje = renderText({
-  paste0(
-    "X: ", input$year_list_slider[1],
-    "\ntestje: ", testje(), 
-    "\nearliest date: ", earliest_date(),
-    "\nlatest date: ", latest_date(),
-    "\nearliest year: ", earliest_year(),
-    "\nlatest year: ", latest_year(),
-    "\nimport counter: ", import_counter()
-  )}
-)
+# output$testje = renderText({
+#   paste0(
+#     "X: ", input$year_list_slider[1],
+#     "\ntestje: ", testje(), 
+#     "\nearliest date: ", earliest_date(),
+#     "\nlatest date: ", latest_date(),
+#     "\nearliest year: ", earliest_year(),
+#     "\nlatest year: ", latest_year(),
+#     "\nimport counter: ", import_counter()
+#   )}
+# )
 # output$width = renderText({paste0("width: ", input$pltChange$width)})
 # output$height = renderText({paste0("height: ", input$pltChange$height)})
 </script>

@@ -294,11 +294,11 @@ output$imported_data_statistics = renderText({
     "",
     paste0(
       "\nImported: \n ",
-      n_rows_data() |> format(big.mark = ","),
+      n_rows_data() %>% format(big.mark = ","),
       " observations\n ",
-      n_checklists() |> format(big.mark = ","),
+      n_checklists() %>% format(big.mark = ","),
       " checklists\n ",
-      n_species() |> format(big.mark = ","),
+      n_species() %>% format(big.mark = ","),
       " species"
     )
   )
@@ -399,19 +399,20 @@ output$species_count_plot = renderGirafe({
     scale_alpha_identity(guide = "none")
   
   # median counts by season by year
+  plot_min_x = as.Date(layer_scales(plot)$x$get_limits()[1])
+  plot_max_x = as.Date(layer_scales(plot)$x$get_limits()[2])
+
   median_counts_by_season = 
     selected_dat() %>% 
-    count(submission_id, location, date, us_season) |> 
-    mutate(year = year(date)) |>
-#    group_by(year, us_season) |> 
-#    mutate(median_count = median(n)) |> 
-#    ungroup() |> 
-    select(year, us_season, date, n) |> 
+    count(submission_id, location, date, us_season) %>% 
+    mutate(year = year(date)) %>%
+    select(year, us_season, date, n) %>% 
     full_join(
       tibble(
-        date = seq.Date(min(selected_dat()$date), max(selected_dat()$date), by = "day")),
+        date = seq.Date(plot_min_x, plot_max_x, by = "day")),
       by = "date"
-    ) |> arrange(date) |> 
+    ) %>% 
+    arrange(date) %>% 
     mutate(
       year = year(date),
       month = month(date),
@@ -422,7 +423,7 @@ output$species_count_plot = renderGirafe({
         month < 12 ~ "fall",
         TRUE ~ NA
       )
-    ) |> 
+    ) %>% 
     mutate(
       new_segment = 
         case_when(
@@ -431,12 +432,12 @@ output$species_count_plot = renderGirafe({
           TRUE ~ FALSE
         ),
       segment = cumsum(new_segment)
-    ) |> 
-    group_by(segment, us_season) |> 
-    mutate(median_count = median(n, na.rm = TRUE)) |> 
-    slice(1, n()) |> 
-    select(segment, us_season, date, median_count) |> 
-    arrange(date) |>
+    ) %>% 
+    group_by(segment, us_season) %>% 
+    mutate(median_count = median(n, na.rm = TRUE)) %>% 
+    slice(1, n()) %>% 
+    select(segment, us_season, date, median_count) %>% 
+    arrange(date) %>%
     mutate(
       color = case_when(
         input$season_coloring == "None" ~ "#707070",
@@ -445,20 +446,20 @@ output$species_count_plot = renderGirafe({
     )
   
   segments_tibble = tibble(
-    x = median_counts_by_season |>
-      filter(row_number() == 1) |> 
+    x = median_counts_by_season %>%
+      filter(row_number() == 1) %>% 
       pull(date),
-    y = median_counts_by_season |> 
-      distinct(segment, us_season, median_count) |> 
+    y = median_counts_by_season %>% 
+      distinct(segment, us_season, median_count) %>% 
       pull(median_count),
-    xend = median_counts_by_season |>
-      filter(row_number() == 2) |> 
+    xend = median_counts_by_season %>%
+      filter(row_number() == 2) %>% 
       pull(date),
-    yend = median_counts_by_season |> 
-      distinct(segment, us_season, median_count) |> 
+    yend = median_counts_by_season %>% 
+      distinct(segment, us_season, median_count) %>% 
       pull(median_count),
-    us_season = median_counts_by_season |> 
-      distinct(segment, us_season) |> 
+    us_season = median_counts_by_season %>% 
+      distinct(segment, us_season) %>% 
       pull(us_season)
   )
   
@@ -559,7 +560,7 @@ output$data_preview = DT::renderDT({
     )
   n_rows = nrow(data_preview_table)
   data_preview_table = 
-    data_preview_table |> 
+    data_preview_table %>% 
     formattable() %>% 
     as.datatable(
       rownames = FALSE,
@@ -579,7 +580,7 @@ output$data_observations = DT::renderDT({
   observations_table =
     selected_dat() %>%
     arrange(desc(date), desc(time)) %>%
-    select(date, count, common_name, location, submission_id, observation_details) |>
+    select(date, count, common_name, location, submission_id, observation_details) %>%
     #     mutate(
     #       # can be used to display scrollable height, for trouble shooting
     #       height = input$pltChange$height,
@@ -589,7 +590,7 @@ output$data_observations = DT::renderDT({
       count = ifelse(count == -1, "X", count),
       observation_details = ifelse(is.na(observation_details), "", observation_details),
       submission_id = paste0("<a target='_blank' href='https://ebird.org/checklist/", submission_id,"'>", submission_id, "</a>")
-    ) |> 
+    ) %>% 
     rename(
       "Date" = date,
       "Count" = count,
@@ -597,8 +598,8 @@ output$data_observations = DT::renderDT({
       "Location" = location,
       "Comments" = observation_details,
       "Checklist ID" = submission_id
-    ) |> 
-    formattable() |> 
+    ) %>% 
+    formattable() %>% 
     as.datatable(
       rownames = FALSE,
       options = list(
@@ -677,11 +678,11 @@ output$year2_table = DT::renderDT({
 })
 
 output$total_time_birding = renderPlot({
-  selected_dat() |> 
-    distinct(year, submission_id, duration_min) |>
-    group_by(year) |> 
-    summarize(total_time_min = sum(duration_min, na.rm = TRUE)) |> 
-    mutate(total_time_hrs = total_time_min / 60) |> 
+  selected_dat() %>% 
+    distinct(year, submission_id, duration_min) %>%
+    group_by(year) %>% 
+    summarize(total_time_min = sum(duration_min, na.rm = TRUE)) %>% 
+    mutate(total_time_hrs = total_time_min / 60) %>% 
     ggplot(aes(x = year, y = total_time_hrs)) + 
     geom_col() +
     labs(
