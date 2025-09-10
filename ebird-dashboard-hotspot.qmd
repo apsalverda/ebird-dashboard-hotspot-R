@@ -175,6 +175,7 @@ observeEvent(input$upload, {
 
 selected_dat = reactive({
   req(input$hotspot)
+  req(input$observation_types)
   if (input$hotspot == "All"){
     # user has selected all hotspots
     my_selected_dat = ebird_dat()
@@ -191,11 +192,16 @@ selected_dat = reactive({
   years(as.numeric(as.character(sort(unique(my_selected_dat$year)))))
   #  n_rows_data(nrow(selected_dat))
   #  n_checklists(selected_dat %>% distinct(submission_id) %>% nrow())
+  ebird_observation_types = paste0("eBird - ", input$observation_types)
   my_selected_dat = my_selected_dat %>%
     filter(
       date >= input$date_range[1],
       date <= input$date_range[2]
-    )
+    ) %>%
+#    filter(protocol %in% c("eBird - Traveling Count", "eBird - Stationary Count", "eBird - Casual Observation"))
+#    filter(protocol == "eBird - Traveling Count")
+    filter(protocol %in% ebird_observation_types)
+
   earliest_year(min(as.numeric(as.character(my_selected_dat$year))))
   latest_year(max(as.numeric(as.character(my_selected_dat$year))))
   top_lat_lng =
@@ -347,7 +353,7 @@ output$species_count_plot = renderGirafe({
     ) +
     labs(
       #      title = "Total species reported by checklist",
-      subtitle = "Note: Clicking on a data point opens the checklist in eBird",
+      subtitle = "Note: Horizontal bar indicates median species count by season. Click on a dot to open the checklist in eBird.",
       x = "",
       y = "Total species reported"
     ) +
@@ -402,10 +408,10 @@ output$species_count_plot = renderGirafe({
     selected_dat() %>% 
     count(submission_id, location, date, us_season) |> 
     mutate(year = year(date)) |>
-    group_by(year, us_season) |> 
-    mutate(median_count = median(n)) |> 
-    ungroup() |> 
-    select(year, us_season, date, median_count) |> 
+#    group_by(year, us_season) |> 
+#    mutate(median_count = median(n)) |> 
+#    ungroup() |> 
+    select(year, us_season, date, n) |> 
     full_join(
       tibble(
         date = seq.Date(min(selected_dat()$date), max(selected_dat()$date), by = "day")),
@@ -432,7 +438,7 @@ output$species_count_plot = renderGirafe({
       segment = cumsum(new_segment)
     ) |> 
     group_by(segment, us_season) |> 
-    mutate(median_count = median(median_count, na.rm = TRUE)) |> 
+    mutate(median_count = median(n, na.rm = TRUE)) |> 
     slice(1, n()) |> 
     select(segment, us_season, date, median_count) |> 
     arrange(date) |>
@@ -883,6 +889,13 @@ output$testje = renderText({
 
 # p(bs_icon("feather"))
 
+checkboxGroupInput(
+  "observation_types",
+  "Observation type",
+  choices = c("Traveling Count", "Stationary Count", "Casual Observation"),
+  selected = c("Traveling Count")
+)
+
 selectInput(
   "hotspot", 
   "Hotspot",
@@ -984,7 +997,6 @@ tags$div(
     onclick = "window.open('https://ebird.org/downloadMyData', '_blank')"
   )
 )
-
 
 #hr()
 ```
