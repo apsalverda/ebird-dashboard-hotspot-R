@@ -150,25 +150,22 @@ observeEvent(input$upload, {
     value = c(earliest_date(), latest_date()),
     timeFormat = "%b %Y"
   )
-  # NOTE: the data range input object gets updated automatically
-  # updateDateRangeInput(
-  #   session,
-  #   "date_range",
-  #   start = earliest_date(),
-  #   end = latest_date(),
-  #   min = earliest_date(),
-  #   max = latest_date()
-  # )
+  updateDateRangeInput(
+    session,
+    "date_range",
+    start = earliest_date(),
+    end = latest_date(),
+    min = earliest_date(),
+    max = latest_date()
+  )
   n_rows_data(nrow(imported_dat))
   n_checklists(
     imported_dat %>%
-      #        filter(protocol != "eBird - Casual Observation") %>%
       distinct(submission_id) %>%
       nrow()
   )
   n_species(
     imported_dat %>% 
-      #        filter(protocol != "eBird - Casual Observation") %>%
       distinct(common_name) %>%
       nrow())
 })
@@ -198,8 +195,6 @@ selected_dat = reactive({
       date >= input$date_range[1],
       date <= input$date_range[2]
     ) %>%
-#    filter(protocol %in% c("eBird - Traveling Count", "eBird - Stationary Count", "eBird - Casual Observation"))
-#    filter(protocol == "eBird - Traveling Count")
     filter(protocol %in% ebird_observation_types)
 
   earliest_year(min(as.numeric(as.character(my_selected_dat$year))))
@@ -861,17 +856,17 @@ observeEvent(
   })
 
 # for trouble shooting
-output$testje = renderText({
-  paste0(
-    "X: ", input$year_list_slider[1],
-    "\ntestje: ", testje(), 
-    "\nearliest date: ", earliest_date(),
-    "\nlatest date: ", latest_date(),
-    "\nearliest year: ", earliest_year(),
-    "\nlatest year: ", latest_year(),
-    "\nimport counter: ", import_counter()
-  )}
-)
+# output$testje = renderText({
+#   paste0(
+#     "X: ", input$year_list_slider[1],
+#     "\ntestje: ", testje(), 
+#     "\nearliest date: ", earliest_date(),
+#     "\nlatest date: ", latest_date(),
+#     "\nearliest year: ", earliest_year(),
+#     "\nlatest year: ", latest_year(),
+#     "\nimport counter: ", import_counter()
+#   )}
+# )
 # output$width = renderText({paste0("width: ", input$pltChange$width)})
 # output$height = renderText({paste0("height: ", input$pltChange$height)})
 ```
@@ -885,7 +880,7 @@ output$testje = renderText({
 # verbatimTextOutput("height")
 
 # for troubleshooting
-#verbatimTextOutput("testje")
+# verbatimTextOutput("testje")
 
 # p(bs_icon("feather"))
 
