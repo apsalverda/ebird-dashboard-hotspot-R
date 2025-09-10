@@ -362,16 +362,16 @@ output$species_count_plot = renderGirafe({
         margin = margin(t = 0, r = 0, b = 15, l = 0)
       )
     )
-  if(input$season_coloring =="None"){
+  if(input$season_coloring == "None"){
     plot = 
       plot +
       scale_color_manual(
         # 636363
-        values = c("#707070", "#707070", "#707070", "#707070"),
+        values = rep("#707070", 4),
         guide = "none"
       )
   } else {
-    if(input$season_coloring =="Southern hemisphere"){
+    if(input$season_coloring == "Southern hemisphere"){
       plot = 
         plot +
         scale_color_manual(
@@ -390,13 +390,87 @@ output$species_count_plot = renderGirafe({
   plot = 
     plot +
     geom_rect(
-    data = my_rects(plot),
-    aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, fill = fill, alpha = alpha),
-    inherit.aes = FALSE
-  ) +
-  scale_fill_identity(guide = "none") +
-  scale_alpha_identity(guide = "none")
-
+      data = my_rects(plot),
+      aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, fill = fill, alpha = alpha),
+      inherit.aes = FALSE
+    ) +
+    scale_fill_identity(guide = "none") +
+    scale_alpha_identity(guide = "none")
+  
+  # median counts by season by year
+  median_counts_by_season = 
+    selected_dat() %>% 
+    count(submission_id, location, date, us_season) |> 
+    mutate(year = year(date)) |>
+    group_by(year, us_season) |> 
+    mutate(median_count = median(n)) |> 
+    ungroup() |> 
+    select(year, us_season, date, median_count) |> 
+    full_join(
+      tibble(
+        date = seq.Date(min(selected_dat()$date), max(selected_dat()$date), by = "day")),
+      by = "date"
+    ) |> arrange(date) |> 
+    mutate(
+      year = year(date),
+      month = month(date),
+      us_season = case_when(
+        month < 3 | month == 12~ "winter",
+        month < 6 ~ "spring",
+        month < 9 ~ "summer",
+        month < 12 ~ "fall",
+        TRUE ~ NA
+      )
+    ) |> 
+    mutate(
+      new_segment = 
+        case_when(
+          row_number() == 1 ~ TRUE,
+          us_season != lag(us_season) ~ TRUE,
+          TRUE ~ FALSE
+        ),
+      segment = cumsum(new_segment)
+    ) |> 
+    group_by(segment, us_season) |> 
+    mutate(median_count = median(median_count, na.rm = TRUE)) |> 
+    slice(1, n()) |> 
+    select(segment, us_season, date, median_count) |> 
+    arrange(date) |>
+    mutate(
+      color = case_when(
+        input$season_coloring == "None" ~ "#707070",
+        TRUE ~ "#000000"
+      )
+    )
+  
+  segments_tibble = tibble(
+    x = median_counts_by_season |>
+      filter(row_number() == 1) |> 
+      pull(date),
+    y = median_counts_by_season |> 
+      distinct(segment, us_season, median_count) |> 
+      pull(median_count),
+    xend = median_counts_by_season |>
+      filter(row_number() == 2) |> 
+      pull(date),
+    yend = median_counts_by_season |> 
+      distinct(segment, us_season, median_count) |> 
+      pull(median_count),
+    us_season = median_counts_by_season |> 
+      distinct(segment, us_season) |> 
+      pull(us_season)
+  )
+  
+  plot = 
+    plot +
+    geom_segment(
+      data = segments_tibble,
+      aes(x = x, y = y, xend = xend, yend = yend, color = us_season),
+      alpha = .3,
+      size = 3,
+      inherit.aes = FALSE
+    )
+    
   # avoid fractions on the Y axis
   # y_axis_breaks = layer_scales(plot)$y$break_positions()
   # y_axis_breaks = y_axis_breaks[!is.na(y_axis_breaks)]
