@@ -356,20 +356,20 @@ You can use the “Import…” button to load your personal eBird data if you h
 <div class="shiny-options-group">
 <div class="checkbox">
 <label>
-<input type="checkbox" name="observation_types" value="Traveling Count" checked="checked">
-<span>Traveling Count</span>
+<input type="checkbox" name="observation_types" value="Traveling" checked="checked">
+<span>Traveling</span>
 </label>
 </div>
 <div class="checkbox">
 <label>
-<input type="checkbox" name="observation_types" value="Stationary Count">
-<span>Stationary Count</span>
+<input type="checkbox" name="observation_types" value="Stationary">
+<span>Stationary</span>
 </label>
 </div>
 <div class="checkbox">
 <label>
-<input type="checkbox" name="observation_types" value="Casual Observation">
-<span>Casual Observation</span>
+<input type="checkbox" name="observation_types" value="Casual">
+<span>Casual</span>
 </label>
 </div>
 </div>
@@ -620,7 +620,12 @@ selected_dat = reactive({
   years(as.numeric(as.character(sort(unique(my_selected_dat$year)))))
   #  n_rows_data(nrow(selected_dat))
   #  n_checklists(selected_dat %>% distinct(submission_id) %>% nrow())
-  ebird_observation_types = paste0("eBird - ", input$observation_types)
+  observation_types = c(
+    "Traveling" = "eBird - Traveling Count",
+    "Stationary" = "eBird - Stationary Count",
+    "Casual" = "eBird - Casual Observation"
+  )
+  ebird_observation_types = observation_types[input$observation_types] |> unname()
   my_selected_dat = my_selected_dat %>%
     filter(
       date >= input$date_range[1],
@@ -900,7 +905,7 @@ output$species_count_plot = renderGirafe({
       data = segments_tibble,
       aes(x = x, y = y, xend = xend, yend = yend, color = us_season),
       alpha = .3,
-      size = 3,
+      linewidth = 3,
       inherit.aes = FALSE
     )
     
@@ -946,13 +951,6 @@ output$species_count_plot = renderGirafe({
 output$data_preview = DT::renderDT({
   data_preview_table =
     selected_dat() %>%
-    # mutate(
-    #   checklist = ifelse(
-    #     protocol == "eBird - Traveling Count",
-    #     submission_id,
-    #     NA
-    #   )
-    # ) %>%
     mutate(n_checklists = n_distinct(submission_id, na.rm = TRUE)) %>%
     group_by(common_name) %>%
     mutate(
