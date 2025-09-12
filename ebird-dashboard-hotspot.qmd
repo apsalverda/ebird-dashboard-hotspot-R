@@ -187,15 +187,16 @@ selected_dat = reactive({
   earliest_date(min(my_selected_dat$date))
   latest_date(max(my_selected_dat$date))
   years(as.numeric(as.character(sort(unique(my_selected_dat$year)))))
-  #  n_rows_data(nrow(selected_dat))
-  #  n_checklists(selected_dat %>% distinct(submission_id) %>% nrow())
   observation_types = c(
     "Traveling" = "eBird - Traveling Count",
     "Stationary" = "eBird - Stationary Count",
     "Casual" = "eBird - Casual Observation"
   )
-  ebird_observation_types = observation_types[input$observation_types] |> unname()
-  my_selected_dat = my_selected_dat %>%
+  ebird_observation_types = 
+    observation_types[input$observation_types] |>
+    unname()
+  my_selected_dat = 
+    my_selected_dat %>%
     filter(
       date >= input$date_range[1],
       date <= input$date_range[2]
@@ -210,9 +211,6 @@ selected_dat = reactive({
   hotspot_latitude(top_lat_lng$latitude)
   hotspot_longitude(top_lat_lng$longitude)
   hotspot_name(top_lat_lng$location)
-  #  years(unique(my_selected_dat$year))
-  # updateNumericInput(session, "year1", value = years()[1], min = years()[1], max = years()[length(years())])
-  # updateNumericInput(session, "year2", value = years()[1], min = years()[1], max = years()[length(years())])
   return(my_selected_dat)
 })
 
@@ -226,7 +224,6 @@ output$total_species_text = renderText({
 
 total_checklists = reactive({
   selected_dat() %>% 
-    #    filter(protocol != "eBird - Casual Observation") %>%
     distinct(submission_id) %>%
     nrow()
 })
@@ -234,6 +231,17 @@ output$total_checklists_text = renderText({
   total_checklists() %>% format(big.mark = ",")
 }
 )
+
+max_checklist = reactive({
+  selected_dat() %>% 
+    count(submission_id) %>%
+    arrange(desc(n)) %>% 
+    slice(1) %>% 
+    pull(n)
+})
+output$max_checklist_text = renderText({
+  max_checklist()
+})
 
 total_time = reactive({
   selected_dat() %>% 
@@ -243,17 +251,20 @@ total_time = reactive({
     pull(total_time_hours) %>% 
     round(1)
 })
-
-total_observations = reactive({
-  selected_dat() %>%
-    nrow()
-})
-
 output$total_time_text = renderText({
   total_time()
 }
 )
 
+total_observations = reactive({
+  selected_dat() %>%
+    nrow()
+})
+output$total_observations_text = renderText({
+  total_observations() %>% format(big.mark = ",")
+})
+
+# currently not using
 # last_trip = reactive({
 #   max_date = max(selected_dat()$date)
 #   paste(
@@ -268,30 +279,6 @@ output$total_time_text = renderText({
 #   last_trip()
 # }
 # )
-
-output$total_observations_text = renderText({
-  total_observations() %>% format(big.mark = ",")
-})
-
-max_checklist = reactive({
-  selected_dat() %>% 
-    count(submission_id) %>%
-    arrange(desc(n)) %>% 
-    slice(1) %>% 
-    pull(n)
-})
-
-output$max_checklist_text = renderText({
-  max_checklist()
-})
-
-# output$imported_data_text = renderText({
-#   paste0(
-#     "Imported ",
-#     imported_dat() %>% nrow(),
-#     " rows of data."
-#   )
-# })
 
 output$imported_data_statistics = renderText({
   ifelse(
@@ -310,7 +297,6 @@ output$imported_data_statistics = renderText({
 })
 
 output$import_filename = renderText({
-  paste0(
     ifelse(
       is.null(input$upload$name),
       "",
@@ -318,7 +304,6 @@ output$import_filename = renderText({
         input$upload$name
       )
     )
-  )
 })
 
 output$species_count_plot = renderGirafe({
@@ -372,7 +357,6 @@ output$species_count_plot = renderGirafe({
     plot = 
       plot +
       scale_color_manual(
-        # 636363
         values = rep("#707070", 4),
         guide = "none"
       )
@@ -393,6 +377,7 @@ output$species_count_plot = renderGirafe({
         )
     }
   }
+  # add gray/white alternating backgrounds indicating seasons
   plot = 
     plot +
     geom_rect(
@@ -403,10 +388,9 @@ output$species_count_plot = renderGirafe({
     scale_fill_identity(guide = "none") +
     scale_alpha_identity(guide = "none")
   
-  # median counts by season by year
+  # median species counts per checklist by season
   plot_min_x = as.Date(layer_scales(plot)$x$get_limits()[1])
   plot_max_x = as.Date(layer_scales(plot)$x$get_limits()[2])
-
   median_counts_by_season = 
     selected_dat() %>% 
     count(submission_id, location, date, us_season) %>% 
@@ -442,15 +426,9 @@ output$species_count_plot = renderGirafe({
     mutate(median_count = median(n, na.rm = TRUE)) %>% 
     slice(1, n()) %>% 
     select(segment, us_season, date, median_count) %>% 
-    arrange(date) %>%
-    mutate(
-      color = case_when(
-        input$season_coloring == "None" ~ "#707070",
-        TRUE ~ "#000000"
-      )
-    )
+    arrange(date)
   
-  segments_tibble = tibble(
+  median_bars = tibble(
     x = median_counts_by_season %>%
       filter(row_number() == 1) %>% 
       pull(date),
@@ -468,10 +446,11 @@ output$species_count_plot = renderGirafe({
       pull(us_season)
   )
   
+  # add horizontal bars displaying median checklist species count by season
   plot = 
     plot +
     geom_segment(
-      data = segments_tibble,
+      data = median_bars,
       aes(x = x, y = y, xend = xend, yend = yend, color = us_season),
       alpha = .3,
       linewidth = 3,
@@ -675,40 +654,42 @@ output$year2_table = DT::renderDT({
     )
 })
 
-output$total_time_birding = renderPlot({
-  selected_dat() %>% 
-    distinct(year, submission_id, duration_min) %>%
-    group_by(year) %>% 
-    summarize(total_time_min = sum(duration_min, na.rm = TRUE)) %>% 
-    mutate(total_time_hrs = total_time_min / 60) %>% 
-    ggplot(aes(x = year, y = total_time_hrs)) + 
-    geom_col() +
-    labs(
-      x = "",
-      y = "Total time (hours)"
-    ) +
-    theme_gray(base_size = 14) +
-    theme(
-      panel.background = element_blank()
-    )
-})
+# currently not used
+# output$total_time_birding = renderPlot({
+#   selected_dat() %>% 
+#     distinct(year, submission_id, duration_min) %>%
+#     group_by(year) %>% 
+#     summarize(total_time_min = sum(duration_min, na.rm = TRUE)) %>% 
+#     mutate(total_time_hrs = total_time_min / 60) %>% 
+#     ggplot(aes(x = year, y = total_time_hrs)) + 
+#     geom_col() +
+#     labs(
+#       x = "",
+#       y = "Total time (hours)"
+#     ) +
+#     theme_gray(base_size = 14) +
+#     theme(
+#       panel.background = element_blank()
+#     )
+# })
 
-output$hotspot_map = renderLeaflet({
-  leaflet() %>%
-    addTiles(
-      urlTemplate = "https://mts1.google.com/vt/lyrs=s&hl=en&src=app&x={x}&y={y}&z={z}&s=G",
-      attribution = "Google"
-    ) %>%
-    addMarkers(
-      lng = hotspot_longitude(), 
-      lat = hotspot_latitude(), 
-      popup = hotspot_name()
-      # lng = top_location_info$longitude, 
-      # lat = top_location_info$latitude, 
-      # popup = top_location_info$location
-    )
-}
-)
+# currently not used
+# output$hotspot_map = renderLeaflet({
+#   leaflet() %>%
+#     addTiles(
+#       urlTemplate = "https://mts1.google.com/vt/lyrs=s&hl=en&src=app&x={x}&y={y}&z={z}&s=G",
+#       attribution = "Google"
+#     ) %>%
+#     addMarkers(
+#       lng = hotspot_longitude(), 
+#       lat = hotspot_latitude(), 
+#       popup = hotspot_name()
+#       # lng = top_location_info$longitude, 
+#       # lat = top_location_info$latitude, 
+#       # popup = top_location_info$location
+#     )
+# }
+# )
 
 output$large_hotspot_map = renderLeaflet({
   leaflet() %>%

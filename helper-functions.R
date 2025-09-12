@@ -157,10 +157,11 @@ my_rects = function(my_plot){
   rect_colors = c("white", "lightgray")
   alpha_level = .1
   rect_tibble = tibble()
-  min_x = as.Date(layer_scales(my_plot)$x$get_limits()[1])
-  max_x = as.Date(layer_scales(my_plot)$x$get_limits()[2])
-  min_y = layer_scales(my_plot)$y$get_limits()[1]
-  max_y = layer_scales(my_plot)$y$get_limits()[2]
+  ls = layer_scales(my_plot)
+  min_x = as.Date(ls$x$get_limits()[1])
+  max_x = as.Date(ls$x$get_limits()[2])
+  min_y = ls$y$get_limits()[1]
+  max_y = ls$y$get_limits()[2]
   current_date = min_x
   rect_start_date = min_x
   rect_number = 1
@@ -181,7 +182,6 @@ my_rects = function(my_plot){
         )
       rect_start_date = current_date
       rect_number = rect_number + 1
-      print(rect_colors[rect_number %% 2])
     }
   }
   rect_tibble =
