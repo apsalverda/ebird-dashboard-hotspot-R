@@ -84,6 +84,11 @@
   border: none;
 }
 
+/* search box for species table */
+.dataTables_filter {
+    float: left !important;
+}
+
     /* leaflet */
     .leaflet-control-container .leaflet-top.leaflet-left {
         /* positions of controls in leaflet container */

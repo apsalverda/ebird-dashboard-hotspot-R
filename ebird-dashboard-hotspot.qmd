@@ -202,7 +202,7 @@ selected_dat = reactive({
       date <= input$date_range[2]
     ) %>%
     filter(protocol %in% ebird_observation_types)
-
+  
   earliest_year(min(as.numeric(as.character(my_selected_dat$year))))
   latest_year(max(as.numeric(as.character(my_selected_dat$year))))
   top_lat_lng =
@@ -297,13 +297,13 @@ output$imported_data_statistics = renderText({
 })
 
 output$import_filename = renderText({
-    ifelse(
-      is.null(input$upload$name),
-      "",
-      paste0(
-        input$upload$name
-      )
+  ifelse(
+    is.null(input$upload$name),
+    "",
+    paste0(
+      input$upload$name
     )
+  )
 })
 
 output$species_count_plot = renderGirafe({
@@ -456,7 +456,7 @@ output$species_count_plot = renderGirafe({
       linewidth = 3,
       inherit.aes = FALSE
     )
-    
+  
   # avoid fractions on the Y axis
   # y_axis_breaks = layer_scales(plot)$y$break_positions()
   # y_axis_breaks = y_axis_breaks[!is.na(y_axis_breaks)]
@@ -542,7 +542,14 @@ output$data_preview = DT::renderDT({
     as.datatable(
       rownames = FALSE,
       options = list(
-        dom = "ft",
+        processing = TRUE,
+        serverSide = TRUE,
+        dom = "fit",
+        language = list(
+          info = "Showing _START_ to _END_ of _TOTAL_ species.",
+          zeroRecords = "No matching species found",
+          infoFiltered = "(Filtered from _MAX_ total species.)"
+        ),
         scrollY = ((input$pltChange$height - 122)) - 148,
         pageLength = n_rows
       )
@@ -580,11 +587,21 @@ output$data_observations = DT::renderDT({
     as.datatable(
       rownames = FALSE,
       options = list(
-        dom = "t",
+        processing = TRUE,
+        serverSide = TRUE,
+        language = list(
+          lengthMenu = "Show _MENU_ observations per page",
+          infoFiltered = "(Filtered from _MAX_ total observations.)",
+          processing = "Processing ...",
+          info = "Showing _START_ to _END_ of _TOTAL_ observations.",
+          zeroRecords = "No matching observations found"
+        ),
+        dom = "rlipt",
         scrollY = ((input$pltChange$height - 122)) - 148,
-        pageLength = n_rows,
+        lengthMenu = c(10, 50, 100, 500, 1000),
+        pageLength = 1000,
         columnDefs = list(
-          list(width = '12', targets = 0),
+          list(width = '12%', targets = 0),
           list(width = '8%', targets = 1),
           list(width = '20%', targets = 2),
           list(width = '25%', targets = 3),
@@ -1119,8 +1136,9 @@ $(document).on('shown.bs.tab', 'a[data-toggle=\"tab\"]', function (e) {
 girafeOutput("species_count_plot")
 ```
 
+### Species
+
 ```{r}
-#| title: "Species"
 div(
   DT::DTOutput("data_preview"),
   style = "font-size: 80%"
