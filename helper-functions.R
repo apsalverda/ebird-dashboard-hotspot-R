@@ -113,6 +113,11 @@ my_color_bar = function(...){
 }
 
 year_list_ecdf = function(my_data, year_from = 2025, year_to = 2025){
+  first_letter_months = function(x) {
+    month_num = as.numeric(format(x, "%m"))
+    first_letters = c("J", substr(month.abb, 1, 1))
+    return(first_letters[month_num])
+  }
   my_data %>%
     filter(year == year_from | year == year_to) %>%
     group_by(year, common_name) %>%
@@ -130,7 +135,8 @@ year_list_ecdf = function(my_data, year_from = 2025, year_to = 2025){
     scale_linewidth_manual(values = c(.5, 1)) +
     scale_x_date(
       limits = c(as.Date(paste0(year_to, "-01-01")), as.Date(paste0(year_to, "-12-31"))),
-      date_labels = c("J", substr(month.abb, 1, 1)), # HACK
+      labels = first_letter_months,
+#      date_labels = c("J", substr(month.abb, 1, 1)), # HACK
       date_breaks = "1 month",
       expand = expansion(mult = c(.005, .005))
     ) +

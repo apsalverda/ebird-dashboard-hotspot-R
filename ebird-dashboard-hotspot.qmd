@@ -564,7 +564,7 @@ output$data_observations = DT::renderDT({
   observations_table =
     selected_dat() %>%
     arrange(desc(date), desc(time)) %>%
-    select(date, count, common_name, location, submission_id, observation_details) %>%
+    select(date, time, count, common_name, location, submission_id, observation_details) %>%
     #     mutate(
     #       # can be used to display scrollable height, for trouble shooting
     #       height = input$pltChange$height,
@@ -577,6 +577,7 @@ output$data_observations = DT::renderDT({
     ) %>% 
     rename(
       "Date" = date,
+      "Time" = time,
       "Count" = count,
       "Common name" = common_name,
       "Location" = location,
@@ -601,12 +602,13 @@ output$data_observations = DT::renderDT({
         lengthMenu = c(10, 50, 100, 500, 1000),
         pageLength = 1000,
         columnDefs = list(
-          list(width = '12%', targets = 0),
-          list(width = '8%', targets = 1),
-          list(width = '20%', targets = 2),
-          list(width = '25%', targets = 3),
-          list(width = '8%', targets = 4),
-          list(width = '27%', targets = 5)
+          list(width = '10%', targets = 0),
+          list(width = '5%', targets = 1),
+          list(width = '5%', targets = 2),
+          list(width = '20%', targets = 3),
+          list(width = '25%', targets = 4),
+          list(width = '8%', targets = 5),
+          list(width = '27%', targets = 6)
         )
       ),
       filter = list(
@@ -995,7 +997,7 @@ tags$div(
 #hr()
 ```
 
-# Hotspot {orientation="rows"}
+# Main {orientation="rows"}
 
 ## Value boxes {height=10%}
 
