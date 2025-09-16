@@ -118,44 +118,79 @@ year_list_ecdf = function(my_data, year_from = 2025, year_to = 2025){
     first_letters = c("J", substr(month.abb, 1, 1))
     return(first_letters[month_num])
   }
-  my_data %>%
-    filter(year == year_from | year == year_to) %>%
-    group_by(year, common_name) %>%
-    slice(1) %>%
-    arrange(year, date) %>%
-    group_by(year) %>%
-    mutate(
-      total = row_number(),
-      date = as.Date(str_replace(as.character(date), as.character(year_from), as.character(year_to)))
+  cum_counts = function(year_dat){
+    year_dat %>%
+      filter(year == year_from | year == year_to) %>%
+      group_by(year, common_name) %>%
+      slice(1) %>%
+      arrange(year, date) %>%
+      group_by(year) %>%
+      mutate(
+        total = row_number(),
+        date = as.Date(str_replace(as.character(date), as.character(year_from), as.character(year_to)))
       ) %>%
-    ungroup() %>%
-    ggplot(aes(x = date, y = total, color = year)) +
-    geom_step(aes(linewidth = year)) +
-    scale_color_manual(values = c("lightgray", "#2375DF")) +
+      ungroup() |>
+      select(date, total, year)
+  }
+  my_dat_from = cum_counts(my_data |> filter(year == year_from))
+  my_dat_to = cum_counts(my_data |> filter(year == year_to))
+
+  if (!(month(max(my_dat_from$date)) == 12 & month(max(my_dat_from$date)) == 31)){
+    my_dat_from = bind_rows(
+      my_dat_from,
+      my_dat_from |>
+        last() |>
+        mutate(date = ceiling_date(date, "year") - 1)
+    )
+  }
+  my_plot =
+    my_dat_from |>
+    ggplot(aes(x = date, y = total))
+  if (year_from != year_to){
+    my_plot =
+      my_plot +
+      geom_step(
+        color = "lightgray",
+        linewidth = .5
+      ) +
+      geom_ribbon(
+        aes(ymin = 0, ymax = total),
+        fill = "lightgray"
+      )
+  }
+  my_plot =
+    my_plot +
+    geom_step(
+      data = my_dat_to,
+      aes(x = date, y = total),
+      color = "#2780e3",
+      linewidth = 1
+    ) +
     scale_linewidth_manual(values = c(.5, 1)) +
     scale_x_date(
       limits = c(as.Date(paste0(year_to, "-01-01")), as.Date(paste0(year_to, "-12-31"))),
       labels = first_letter_months,
-#      date_labels = c("J", substr(month.abb, 1, 1)), # HACK
+      #      date_labels = c("J", substr(month.abb, 1, 1)), # HACK
       date_breaks = "1 month",
       expand = expansion(mult = c(.005, .005))
     ) +
-#    scale_y_continuous(expansion(mult = c(0, .05))) +
+    #    scale_y_continuous(expansion(mult = c(0, .05))) +
     labs(
       title = "Number of species reported",
       x = "",
       y = ""
     ) +
-    theme_gray(base_size = 14) +
+    #  theme_gray(base_size = 14) +
     theme(
       panel.background = element_blank(),
-      legend.position = "inside",
+      legend.position = "right",
       legend.position.inside = c(.9, .12),
       legend.background = element_rect(color = NA, fill = NA),
       legend.box.background = element_rect(color = NA, fill = NA),
       legend.title = element_blank(),
       plot.margin = margin(0, 10, 0, 0, "pt")
     )
+  return(my_plot)
 }
 
 my_rects = function(my_plot){

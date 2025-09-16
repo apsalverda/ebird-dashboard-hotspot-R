@@ -74,6 +74,11 @@
   border: none;
 }
 
+.top-left-container .irs--shiny .irs-handle.to {
+    background-color: #2780e3 !important;
+    background: #2780e3 !important;
+}
+
 .top-right-container {
   height: 222px;
   border: none;
@@ -83,6 +88,7 @@
   height: 222px;
   border: none;
 }
+
 
 /* search box for species table */
 .dataTables_filter {
@@ -165,4 +171,5 @@
             background: transparent
         }
     }
+
 }
