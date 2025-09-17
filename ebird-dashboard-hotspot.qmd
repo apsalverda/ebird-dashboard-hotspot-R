@@ -3,6 +3,9 @@ title: "eBird User Dashboard"
 #author: "Anne Pier Salverda"
 format: 
   dashboard:
+    output-file: index.html
+    embed-resources: true
+    self-contained: true
     orientation: columns
     expandable: false
     theme: 
@@ -316,7 +319,7 @@ output$species_count_plot = renderGirafe({
   if(is_ubuntu()) {
     dot_size = 1
   } else {
-    dot_size= 1.5
+    dot_size = 1.5
   }
   plot = 
     selected_dat() %>% 
