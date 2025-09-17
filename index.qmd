@@ -32,11 +32,6 @@ format:
 server: shiny
 ---
 
-```{css, echo = FALSE, include = TRUE}
-
-<!-- .irs--shiny .irs-handle:hover { background-color: darkgray; width: 12px; height: 12px; top: 23px } -->
-```
-
 ```{r setup}
 #| include: false
 if (!file.exists("MyEBirdData.csv")){
