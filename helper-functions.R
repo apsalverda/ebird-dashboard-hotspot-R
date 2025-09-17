@@ -151,11 +151,12 @@ year_list_ecdf = function(my_data, year_from = 2025, year_to = 2025){
       my_plot +
       geom_step(
         color = "lightgray",
-        linewidth = .5
+        linewidth = .3
       ) +
       geom_ribbon(
         aes(ymin = 0, ymax = total),
-        fill = "lightgray"
+        fill = "lightgray",
+        alpha = .2
       )
   }
   my_plot =
@@ -164,7 +165,7 @@ year_list_ecdf = function(my_data, year_from = 2025, year_to = 2025){
       data = my_dat_to,
       aes(x = date, y = total),
       color = "#2780e3",
-      linewidth = 1
+      linewidth = .5
     ) +
     scale_linewidth_manual(values = c(.5, 1)) +
     scale_x_date(
@@ -182,12 +183,13 @@ year_list_ecdf = function(my_data, year_from = 2025, year_to = 2025){
     ) +
     #  theme_gray(base_size = 14) +
     theme(
+      text = element_text(size = 14),
       panel.background = element_blank(),
-      legend.position = "right",
-      legend.position.inside = c(.9, .12),
-      legend.background = element_rect(color = NA, fill = NA),
-      legend.box.background = element_rect(color = NA, fill = NA),
-      legend.title = element_blank(),
+      # legend.position = "right",
+      # legend.position.inside = c(.9, .12),
+      # legend.background = element_rect(color = NA, fill = NA),
+      # legend.box.background = element_rect(color = NA, fill = NA),
+      # legend.title = element_blank(),
       plot.margin = margin(0, 10, 0, 0, "pt")
     )
   return(my_plot)

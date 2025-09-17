@@ -342,7 +342,7 @@ output$species_count_plot = renderGirafe({
       x = "",
       y = "Total species reported"
     ) +
-#    theme_gray(base_size = 14) +
+    #    theme_gray(base_size = 14) +
     theme(
       panel.grid = element_blank(),
       panel.background = element_blank(),
@@ -382,7 +382,14 @@ output$species_count_plot = renderGirafe({
     plot +
     geom_rect(
       data = my_rects(plot),
-      aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, fill = fill, alpha = alpha),
+      aes(
+        xmin = xmin, 
+        xmax = xmax, 
+        ymin = ymin,
+        ymax = ymax, 
+        fill = fill, 
+        alpha = alpha
+      ),
       inherit.aes = FALSE
     ) +
     scale_fill_identity(guide = "none") +

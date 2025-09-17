@@ -74,6 +74,11 @@
   border: none;
 }
 
+.top-left-container .irs--shiny .irs-handle.from {
+    background-color: #f6f6f6 !important;
+    background: #f6f6f6 !important;
+}
+
 .top-left-container .irs--shiny .irs-handle.to {
     background-color: #2780e3 !important;
     background: #2780e3 !important;
