@@ -6,6 +6,7 @@ format:
     output-file: index.html
     embed-resources: true
     self-contained: true
+    favicon: "favicon.ico"
     orientation: columns
     loading: "Loading eBird user dashboard ..."
     expandable: false
@@ -34,47 +35,48 @@ server: shiny
 
 ```{r setup}
 #| include: false
+# check if default data set can be located
 if (!file.exists("MyEBirdData.csv")){
-  stop("Cannot compile document. Missing required file \"MyEBirdData.csv\".\nPlease add this file with your personal eBird data to the folder from which you compile the document.")
+stop("Cannot compile document. Missing required file \"MyEBirdData.csv\".\nPlease add this file with your personal eBird data to the folder from which you compile the document.")
 }
 
 if (TRUE == FALSE){
-  # KEEP THIS SECTION!
-  # SHINYAPPS.IO scans R code to figure out which packages it needs to install.
-  # It looks for 'library("[package]")' syntax, which this script does not use;
-  # it uses a loop (see below) to load packages.
-  library("tidyverse")
-  library("ggplot2")
-  library("shiny")
-  library("bslib")
-  library("bsicons")
-  library("leaflet")
-  library("ggiraph")
-  library("formattable")
+# KEEP THIS SECTION!
+# SHINYAPPS.IO scans R code to figure out which packages it needs to install.
+# It looks for 'library("[package]")' syntax, which this script does not use;
+# it uses a loop (see below) to load packages.
+library("tidyverse")
+library("ggplot2")
+library("shiny")
+library("bslib")
+library("bsicons")
+library("leaflet")
+library("ggiraph")
+library("formattable")
 }
 
 required_packages =
-  c(
-    "tidyverse",
-    "ggplot2",
-    "shiny",
-    "bslib",
-    "bsicons",
-    "leaflet",
-    "ggiraph",
-    "formattable",
-    "DT",
-    "janitor"
-  )
+c(
+"tidyverse",
+"ggplot2",
+"shiny",
+"bslib",
+"bsicons",
+"leaflet",
+"ggiraph",
+"formattable",
+"DT",
+"janitor"
+)
 missing_packages = required_packages[!sapply(required_packages, requireNamespace, quietly = TRUE)]
 if (length(missing_packages) > 0){
-  stop(
-    paste(
-      "The following packages are required to run the dashboard:\n\n",
-      paste0(missing_packages, collapse = ", "),
-      "\n\nPlease make sure to install these packages before compiling the dashboard."
-    )
-  )
+stop(
+paste(
+"The following packages are required to run the dashboard:\n\n",
+paste0(missing_packages, collapse = ", "),
+"\n\nPlease make sure to install these packages before compiling the dashboard."
+)
+)
 }
 
 invisible(lapply(required_packages, library, character.only = TRUE))
@@ -92,6 +94,11 @@ winter_color = "#56B3FA"
 options(shiny.maxRequestSize = 15 * 1024 ^ 2) # accept uploads upto 15 MB
 
 source("helper-functions.R", local = TRUE)
+```
+
+```{=html}
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
 ```
 
 ```{r}
@@ -117,152 +124,152 @@ hotspot_name = reactiveVal("")
 years = reactiveVal(list(NULL))
 
 ebird_dat = reactiveVal({
-  read_ebird_data()
+read_ebird_data()
 })
 
 imported_dat = reactive({
-  req(input$upload)
-  imported_dat = read_ebird_data(input$upload$datapath)
+req(input$upload)
+imported_dat = read_ebird_data(input$upload$datapath)
 })
 
 observeEvent(input$upload, {
-  # triggered in response to the user uploading a file
-  import_counter(import_counter() + 1)
-  imported_dat = read_ebird_data(input$upload$datapath)
-  ebird_dat(imported_dat)
-  years(as.numeric(as.character(sort(unique(imported_dat$year)))))
-  earliest_date(min(imported_dat$date))
-  latest_date(max(imported_dat$date))
-  updateSelectInput(
-    session,
-    "years_year_from",
-    choices = years()
-  )
-  updateSelectInput(
-    session,
-    "years_year_to",
-    choices = years()
-  )
-  updateSliderInput(
-    session,
-    "date_range_slider",
-    min = earliest_date(),
-    max = latest_date(),
-    value = c(earliest_date(), latest_date()),
-    timeFormat = "%b %Y"
-  )
-  updateDateRangeInput(
-    session,
-    "date_range",
-    start = earliest_date(),
-    end = latest_date(),
-    min = earliest_date(),
-    max = latest_date()
-  )
-  n_rows_data(nrow(imported_dat))
-  n_checklists(
-    imported_dat %>%
-      distinct(submission_id) %>%
-      nrow()
-  )
-  n_species(
-    imported_dat %>% 
-      distinct(common_name) %>%
-      nrow())
+# triggered in response to the user uploading a file
+import_counter(import_counter() + 1)
+imported_dat = read_ebird_data(input$upload$datapath)
+ebird_dat(imported_dat)
+years(as.numeric(as.character(sort(unique(imported_dat$year)))))
+earliest_date(min(imported_dat$date))
+latest_date(max(imported_dat$date))
+updateSelectInput(
+session,
+"years_year_from",
+choices = years()
+)
+updateSelectInput(
+session,
+"years_year_to",
+choices = years()
+)
+updateSliderInput(
+session,
+"date_range_slider",
+min = earliest_date(),
+max = latest_date(),
+value = c(earliest_date(), latest_date()),
+timeFormat = "%b %Y"
+)
+updateDateRangeInput(
+session,
+"date_range",
+start = earliest_date(),
+end = latest_date(),
+min = earliest_date(),
+max = latest_date()
+)
+n_rows_data(nrow(imported_dat))
+n_checklists(
+imported_dat %>%
+distinct(submission_id) %>%
+nrow()
+)
+n_species(
+imported_dat %>% 
+distinct(common_name) %>%
+nrow())
 })
 
 selected_dat = reactive({
-  req(input$hotspot)
-  req(input$observation_types)
-  if (input$hotspot == "All"){
-    # user has selected all hotspots
-    my_selected_dat = ebird_dat()
-  } else {
-    # user has selected a hotspot
-    my_selected_dat = 
-      ebird_dat() %>% 
-      filter(
-        location == input$hotspot
-      )
-  }
-  earliest_date(min(my_selected_dat$date))
-  latest_date(max(my_selected_dat$date))
-  years(as.numeric(as.character(sort(unique(my_selected_dat$year)))))
-  observation_types = c(
-    "Traveling" = "eBird - Traveling Count",
-    "Stationary" = "eBird - Stationary Count",
-    "Casual" = "eBird - Casual Observation"
-  )
-  ebird_observation_types = 
-    observation_types[input$observation_types] |>
-    unname()
-  my_selected_dat = 
-    my_selected_dat %>%
-    filter(
-      date >= input$date_range[1],
-      date <= input$date_range[2]
-    ) %>%
-    filter(protocol %in% ebird_observation_types)
-  
-  earliest_year(min(as.numeric(as.character(my_selected_dat$year))))
-  latest_year(max(as.numeric(as.character(my_selected_dat$year))))
-  top_lat_lng =
-    my_selected_dat %>%
-    distinct(location, latitude, longitude)
-  hotspot_latitude(top_lat_lng$latitude)
-  hotspot_longitude(top_lat_lng$longitude)
-  hotspot_name(top_lat_lng$location)
-  return(my_selected_dat)
+req(input$hotspot)
+req(input$observation_types)
+if (input$hotspot == "All"){
+# user has selected all hotspots
+my_selected_dat = ebird_dat()
+} else {
+# user has selected a hotspot
+my_selected_dat = 
+ebird_dat() %>% 
+filter(
+location == input$hotspot
+)
+}
+earliest_date(min(my_selected_dat$date))
+latest_date(max(my_selected_dat$date))
+years(as.numeric(as.character(sort(unique(my_selected_dat$year)))))
+observation_types = c(
+"Traveling" = "eBird - Traveling Count",
+"Stationary" = "eBird - Stationary Count",
+"Casual" = "eBird - Casual Observation"
+)
+ebird_observation_types = 
+observation_types[input$observation_types] |>
+unname()
+my_selected_dat = 
+my_selected_dat %>%
+filter(
+date >= input$date_range[1],
+date <= input$date_range[2]
+) %>%
+filter(protocol %in% ebird_observation_types)
+
+earliest_year(min(as.numeric(as.character(my_selected_dat$year))))
+latest_year(max(as.numeric(as.character(my_selected_dat$year))))
+top_lat_lng =
+my_selected_dat %>%
+distinct(location, latitude, longitude)
+hotspot_latitude(top_lat_lng$latitude)
+hotspot_longitude(top_lat_lng$longitude)
+hotspot_name(top_lat_lng$location)
+return(my_selected_dat)
 })
 
 total_species = reactive({
-  selected_dat() %>% distinct(common_name) %>% nrow()
+selected_dat() %>% distinct(common_name) %>% nrow()
 })
 output$total_species_text = renderText({
-  total_species() %>% format(big.mark = ",")
+total_species() %>% format(big.mark = ",")
 }
 )
 
 total_checklists = reactive({
-  selected_dat() %>% 
-    distinct(submission_id) %>%
-    nrow()
+selected_dat() %>% 
+distinct(submission_id) %>%
+nrow()
 })
 output$total_checklists_text = renderText({
-  total_checklists() %>% format(big.mark = ",")
+total_checklists() %>% format(big.mark = ",")
 }
 )
 
 max_checklist = reactive({
-  selected_dat() %>% 
-    count(submission_id) %>%
-    arrange(desc(n)) %>% 
-    slice(1) %>% 
-    pull(n)
+selected_dat() %>% 
+count(submission_id) %>%
+arrange(desc(n)) %>% 
+slice(1) %>% 
+pull(n)
 })
 output$max_checklist_text = renderText({
-  max_checklist()
+max_checklist()
 })
 
 total_time = reactive({
-  selected_dat() %>% 
-    distinct(submission_id, duration_min) %>% 
-    filter(!is.na(duration_min)) %>%
-    summarize(total_time_hours = sum(duration_min) / 60) %>% 
-    pull(total_time_hours) %>% 
-    round(1)
+selected_dat() %>% 
+distinct(submission_id, duration_min) %>% 
+filter(!is.na(duration_min)) %>%
+summarize(total_time_hours = sum(duration_min) / 60) %>% 
+pull(total_time_hours) %>% 
+round(1)
 })
 output$total_time_text = renderText({
-  total_time()
+total_time()
 }
 )
 
 total_observations = reactive({
-  selected_dat() %>%
-    nrow()
+selected_dat() %>%
+nrow()
 })
 output$total_observations_text = renderText({
-  total_observations() %>% format(big.mark = ",")
+total_observations() %>% format(big.mark = ",")
 })
 
 # currently not using
@@ -282,414 +289,414 @@ output$total_observations_text = renderText({
 # )
 
 output$imported_data_statistics = renderText({
-  ifelse(
-    is.null(input$upload$name),
-    "",
-    paste0(
-      "\nImported: \n ",
-      n_rows_data() %>% format(big.mark = ","),
-      " observations\n ",
-      n_checklists() %>% format(big.mark = ","),
-      " checklists\n ",
-      n_species() %>% format(big.mark = ","),
-      " species"
-    )
-  )
+ifelse(
+is.null(input$upload$name),
+"",
+paste0(
+"\nImported: \n ",
+n_rows_data() %>% format(big.mark = ","),
+" observations\n ",
+n_checklists() %>% format(big.mark = ","),
+" checklists\n ",
+n_species() %>% format(big.mark = ","),
+" species"
+)
+)
 })
 
 output$import_filename = renderText({
-  ifelse(
-    is.null(input$upload$name),
-    "",
-    paste0(
-      input$upload$name
-    )
-  )
+ifelse(
+is.null(input$upload$name),
+"",
+paste0(
+input$upload$name
+)
+)
 })
 
 output$species_count_plot = renderGirafe({
-  is_ubuntu = function() {
-    os_info = Sys.info()
-    return(grepl("Ubuntu", os_info["version"], ignore.case = TRUE))
-  }
-  if(is_ubuntu()) {
-    dot_size = 1
-  } else {
-    dot_size = 1.5
-  }
-  plot = 
-    selected_dat() %>% 
-    count(submission_id, location, date, us_season) %>% 
-    mutate(
-      my_label = paste(
-        n,
-        "species on ", 
-        ordinal_date_suffix(date),
-        "\n",
-        location
-      )
-    ) %>% 
-    ggplot(aes(x = date, y = n, color = us_season)) + 
-    geom_point_interactive(
-      #      position = ggbeeswarm::position_quasirandom(width = 1),
-      shape = 16,
-      size = dot_size,
-      aes(
-        tooltip = my_label,
-        data_id = submission_id,
-        tooltip_fill = date,
-        onclick = sprintf("window.open(\"https://ebird.org/checklist/%s\")", submission_id)
-      )
-    ) +
-    scale_x_date() +
-    scale_y_continuous(
-      #      expand = expansion(add = c(1, 1)),
-      limits = c(0, NA),
-      breaks = ~unique(round(pretty(.)))
-    ) +
-    labs(
-      #      title = "Total species reported by checklist",
-      subtitle = "Note: Horizontal bar indicates median species count by season. Click on a dot to open the checklist in eBird.",
-      x = "",
-      y = "Total species reported"
-    ) +
-    #    theme_gray(base_size = 14) +
-    theme(
-      panel.grid = element_blank(),
-      panel.background = element_blank(),
-      axis.title.y = element_text(margin = margin(t = 0, r = 15, b = 0, l = 0)),
-      plot.subtitle = element_text(
-        color = "#707070",
-        size = 10,
-        margin = margin(t = 0, r = 0, b = 15, l = 0)
-      )
-    )
-  if(input$season_coloring == "None"){
-    plot = 
-      plot +
-      scale_color_manual(
-        values = rep("#707070", 4),
-        guide = "none"
-      )
-  } else {
-    if(input$season_coloring == "Southern hemisphere"){
-      plot = 
-        plot +
-        scale_color_manual(
-          values = c("spring" = fall_color, "summer" = winter_color, "fall" = spring_color, "winter" = summer_color),
-          guide = "none"
-        )
-    } else {
-      plot = 
-        plot +
-        scale_color_manual(
-          values = c("spring" = spring_color, "summer" = summer_color, "winter" = winter_color, "fall" = fall_color),
-          guide = "none"
-        )
-    }
-  }
-  # add gray/white alternating backgrounds indicating seasons
-  plot = 
-    plot +
-    geom_rect(
-      data = my_rects(plot),
-      aes(
-        xmin = xmin, 
-        xmax = xmax, 
-        ymin = ymin,
-        ymax = ymax, 
-        fill = fill, 
-        alpha = alpha
-      ),
-      inherit.aes = FALSE
-    ) +
-    scale_fill_identity(guide = "none") +
-    scale_alpha_identity(guide = "none")
-  
-  # median species counts per checklist by season
-  plot_min_x = as.Date(layer_scales(plot)$x$get_limits()[1])
-  plot_max_x = as.Date(layer_scales(plot)$x$get_limits()[2])
-  median_counts_by_season = 
-    selected_dat() %>% 
-    count(submission_id, location, date, us_season) %>% 
-    mutate(year = year(date)) %>%
-    select(year, us_season, date, n) %>% 
-    full_join(
-      tibble(
-        date = seq.Date(plot_min_x, plot_max_x, by = "day")),
-      by = "date"
-    ) %>% 
-    arrange(date) %>% 
-    mutate(
-      year = year(date),
-      month = month(date),
-      us_season = case_when(
-        month < 3 | month == 12~ "winter",
-        month < 6 ~ "spring",
-        month < 9 ~ "summer",
-        month < 12 ~ "fall",
-        TRUE ~ NA
-      )
-    ) %>% 
-    mutate(
-      new_segment = 
-        case_when(
-          row_number() == 1 ~ TRUE,
-          us_season != lag(us_season) ~ TRUE,
-          TRUE ~ FALSE
-        ),
-      segment = cumsum(new_segment)
-    ) %>% 
-    group_by(segment, us_season) %>% 
-    mutate(median_count = median(n, na.rm = TRUE)) %>% 
-    slice(1, n()) %>% 
-    select(segment, us_season, date, median_count) %>% 
-    arrange(date)
-  
-  median_bars = tibble(
-    x = median_counts_by_season %>%
-      filter(row_number() == 1) %>% 
-      pull(date),
-    y = median_counts_by_season %>% 
-      distinct(segment, us_season, median_count) %>% 
-      pull(median_count),
-    xend = median_counts_by_season %>%
-      filter(row_number() == 2) %>% 
-      pull(date),
-    yend = median_counts_by_season %>% 
-      distinct(segment, us_season, median_count) %>% 
-      pull(median_count),
-    us_season = median_counts_by_season %>% 
-      distinct(segment, us_season) %>% 
-      pull(us_season)
-  )
-  
-  # add horizontal bars displaying median checklist species count by season
-  plot = 
-    plot +
-    geom_segment(
-      data = median_bars,
-      aes(x = x, y = y, xend = xend, yend = yend, color = us_season),
-      alpha = .3,
-      linewidth = 3,
-      inherit.aes = FALSE
-    )
-  
-  # avoid fractions on the Y axis
-  # y_axis_breaks = layer_scales(plot)$y$break_positions()
-  # y_axis_breaks = y_axis_breaks[!is.na(y_axis_breaks)]
-  # if (length(y_axis_breaks[y_axis_breaks != round(y_axis_breaks)]) > 0){
-  #   y_axis_breaks = y_axis_breaks[y_axis_breaks == round(y_axis_breaks)]
-  #   plot = 
-  #     plot +
-  #     scale_y_continuous(breaks = y_axis_breaks)
-  # }
-  girafe(
-    ggobj = plot, 
-    pointsize = 60,
-    width_svg = (0.98 * (input$pltChange$width - 300) / input$pltChange$dpi),
-    height_svg = (0.88 * (input$pltChange$height - 95 - 80) / input$pltChange$dpi)
-    # width_svg = (0.98 * (input$pltChange$width - 300) / input$pltChange$dpi),
-    # height_svg = (0.75 * (input$pltChange$height - 100) / input$pltChange$dpi)
-  ) %>% 
-    girafe_options(
-      opts_sizing(rescale = FALSE),
-      opts_toolbar(
-        fixed = TRUE,
-        pngname = "ebird-dashboard.png",
-        hidden = c("selection", "saveaspng")
-      ),
-      opts_tooltip(
-        use_fill = TRUE,
-        opacity = .7,
-        offx = 10,
-        offy = 0
-        #    css = "color:blue; background-color:red, fill-opacity:.5;"
-        #    tooltip_fill = "white"
-      ),
-      #  opts_hover(css = "stroke:yellow;stroke-width:3px;fill-opacity:0.8;")
-      opts_hover(
-        css = "stroke:black; stroke-width:1px;"
-      )
-    )
+is_ubuntu = function() {
+os_info = Sys.info()
+return(grepl("Ubuntu", os_info["version"], ignore.case = TRUE))
+}
+if(is_ubuntu()) {
+dot_size = 1
+} else {
+dot_size = 1.5
+}
+plot = 
+selected_dat() %>% 
+count(submission_id, location, date, us_season) %>% 
+mutate(
+my_label = paste(
+n,
+"species on ", 
+ordinal_date_suffix(date),
+"\n",
+location
+)
+) %>% 
+ggplot(aes(x = date, y = n, color = us_season)) + 
+geom_point_interactive(
+#      position = ggbeeswarm::position_quasirandom(width = 1),
+shape = 16,
+size = dot_size,
+aes(
+tooltip = my_label,
+data_id = submission_id,
+tooltip_fill = date,
+onclick = sprintf("window.open(\"https://ebird.org/checklist/%s\")", submission_id)
+)
+) +
+scale_x_date() +
+scale_y_continuous(
+#      expand = expansion(add = c(1, 1)),
+limits = c(0, NA),
+breaks = ~unique(round(pretty(.)))
+) +
+labs(
+#      title = "Total species reported by checklist",
+subtitle = "Note: Horizontal bar indicates median species count by season. Click on a dot to open the checklist in eBird.",
+x = "",
+y = "Total species reported"
+) +
+#    theme_gray(base_size = 14) +
+theme(
+panel.grid = element_blank(),
+panel.background = element_blank(),
+axis.title.y = element_text(margin = margin(t = 0, r = 15, b = 0, l = 0)),
+plot.subtitle = element_text(
+color = "#707070",
+size = 10,
+margin = margin(t = 0, r = 0, b = 15, l = 0)
+)
+)
+if(input$season_coloring == "None"){
+plot = 
+plot +
+scale_color_manual(
+values = rep("#707070", 4),
+guide = "none"
+)
+} else {
+if(input$season_coloring == "Southern hemisphere"){
+plot = 
+plot +
+scale_color_manual(
+values = c("spring" = fall_color, "summer" = winter_color, "fall" = spring_color, "winter" = summer_color),
+guide = "none"
+)
+} else {
+plot = 
+plot +
+scale_color_manual(
+values = c("spring" = spring_color, "summer" = summer_color, "winter" = winter_color, "fall" = fall_color),
+guide = "none"
+)
+}
+}
+# add gray/white alternating backgrounds indicating seasons
+plot = 
+plot +
+geom_rect(
+data = my_rects(plot),
+aes(
+xmin = xmin, 
+xmax = xmax, 
+ymin = ymin,
+ymax = ymax, 
+fill = fill, 
+alpha = alpha
+),
+inherit.aes = FALSE
+) +
+scale_fill_identity(guide = "none") +
+scale_alpha_identity(guide = "none")
+
+# median species counts per checklist by season
+plot_min_x = as.Date(layer_scales(plot)$x$get_limits()[1])
+plot_max_x = as.Date(layer_scales(plot)$x$get_limits()[2])
+median_counts_by_season = 
+selected_dat() %>% 
+count(submission_id, location, date, us_season) %>% 
+mutate(year = year(date)) %>%
+select(year, us_season, date, n) %>% 
+full_join(
+tibble(
+date = seq.Date(plot_min_x, plot_max_x, by = "day")),
+by = "date"
+) %>% 
+arrange(date) %>% 
+mutate(
+year = year(date),
+month = month(date),
+us_season = case_when(
+month < 3 | month == 12~ "winter",
+month < 6 ~ "spring",
+month < 9 ~ "summer",
+month < 12 ~ "fall",
+TRUE ~ NA
+)
+) %>% 
+mutate(
+new_segment = 
+case_when(
+row_number() == 1 ~ TRUE,
+us_season != lag(us_season) ~ TRUE,
+TRUE ~ FALSE
+),
+segment = cumsum(new_segment)
+) %>% 
+group_by(segment, us_season) %>% 
+mutate(median_count = median(n, na.rm = TRUE)) %>% 
+slice(1, n()) %>% 
+select(segment, us_season, date, median_count) %>% 
+arrange(date)
+
+median_bars = tibble(
+x = median_counts_by_season %>%
+filter(row_number() == 1) %>% 
+pull(date),
+y = median_counts_by_season %>% 
+distinct(segment, us_season, median_count) %>% 
+pull(median_count),
+xend = median_counts_by_season %>%
+filter(row_number() == 2) %>% 
+pull(date),
+yend = median_counts_by_season %>% 
+distinct(segment, us_season, median_count) %>% 
+pull(median_count),
+us_season = median_counts_by_season %>% 
+distinct(segment, us_season) %>% 
+pull(us_season)
+)
+
+# add horizontal bars displaying median checklist species count by season
+plot = 
+plot +
+geom_segment(
+data = median_bars,
+aes(x = x, y = y, xend = xend, yend = yend, color = us_season),
+alpha = .3,
+linewidth = 3,
+inherit.aes = FALSE
+)
+
+# avoid fractions on the Y axis
+# y_axis_breaks = layer_scales(plot)$y$break_positions()
+# y_axis_breaks = y_axis_breaks[!is.na(y_axis_breaks)]
+# if (length(y_axis_breaks[y_axis_breaks != round(y_axis_breaks)]) > 0){
+#   y_axis_breaks = y_axis_breaks[y_axis_breaks == round(y_axis_breaks)]
+#   plot = 
+#     plot +
+#     scale_y_continuous(breaks = y_axis_breaks)
+# }
+girafe(
+ggobj = plot, 
+pointsize = 60,
+width_svg = (0.98 * (input$pltChange$width - 300) / input$pltChange$dpi),
+height_svg = (0.88 * (input$pltChange$height - 95 - 80) / input$pltChange$dpi)
+# width_svg = (0.98 * (input$pltChange$width - 300) / input$pltChange$dpi),
+# height_svg = (0.75 * (input$pltChange$height - 100) / input$pltChange$dpi)
+) %>% 
+girafe_options(
+opts_sizing(rescale = FALSE),
+opts_toolbar(
+fixed = TRUE,
+pngname = "ebird-dashboard.png",
+hidden = c("selection", "saveaspng")
+),
+opts_tooltip(
+use_fill = TRUE,
+opacity = .7,
+offx = 10,
+offy = 0
+#    css = "color:blue; background-color:red, fill-opacity:.5;"
+#    tooltip_fill = "white"
+),
+#  opts_hover(css = "stroke:yellow;stroke-width:3px;fill-opacity:0.8;")
+opts_hover(
+css = "stroke:black; stroke-width:1px;"
+)
+)
 })
 
 output$data_preview = DT::renderDT({
-  data_preview_table =
-    selected_dat() %>%
-    mutate(n_checklists = n_distinct(submission_id, na.rm = TRUE)) %>%
-    group_by(common_name) %>%
-    mutate(
-      first_seen_checklist = ifelse(
-        date == min(date) & row_number() == 1,
-        submission_id,
-        NA),
-      last_seen_checklist = ifelse(
-        date == max(date) & row_number() == n(),
-        submission_id,
-        NA)
-    ) %>% 
-    fill(first_seen_checklist, .direction = "down") %>% 
-    fill(last_seen_checklist, .direction = "up") %>% 
-    summarize(
-      first_seen = min(date),
-      last_seen = max(date),
-      first_seen_checklist = unique(first_seen_checklist),
-      last_seen_checklist = unique(last_seen_checklist),
-      perc_checklists = (100 * (n() / max(n_checklists))) %>% round(1),
-      n_checklists = n()
-    ) %>%
-    mutate(
-      perc_checklists = my_color_bar()(perc_checklists),
-      first_seen = paste0("<a target='_blank' href='https://ebird.org/checklist/", first_seen_checklist,"'>", first_seen, "</a>"),
-      last_seen = paste0("<a target='_blank' href='https://ebird.org/checklist/", last_seen_checklist,"'>", last_seen, "</a>")
-    ) %>% 
-    select(-c(first_seen_checklist, last_seen_checklist)) %>% 
-    arrange(desc(perc_checklists)) %>% 
-    rename(
-      "Species" = common_name,
-      "First" = first_seen,
-      "Last" = last_seen,
-      "% Checklists" = perc_checklists,
-      "N Checklists" = n_checklists
-    )
-  n_rows = nrow(data_preview_table)
-  data_preview_table = 
-    data_preview_table %>% 
-    formattable() %>% 
-    as.datatable(
-      rownames = FALSE,
-      options = list(
-        processing = TRUE,
-        serverSide = TRUE,
-        dom = "fit",
-        language = list(
-          info = "Showing _START_ to _END_ of _TOTAL_ species.",
-          zeroRecords = "No matching species found",
-          infoFiltered = "(Filtered from _MAX_ total species.)"
-        ),
-        scrollY = ((input$pltChange$height - 122)) - 148,
-        pageLength = n_rows
-      )
-    )
-  # something in the above changes N checklists to character; fix for sorting
-  data_preview_table$x$data$`N Checklists` = as.numeric(data_preview_table$x$data$`N Checklists`)
-  return(data_preview_table)
+data_preview_table =
+selected_dat() %>%
+mutate(n_checklists = n_distinct(submission_id, na.rm = TRUE)) %>%
+group_by(common_name) %>%
+mutate(
+first_seen_checklist = ifelse(
+date == min(date) & row_number() == 1,
+submission_id,
+NA),
+last_seen_checklist = ifelse(
+date == max(date) & row_number() == n(),
+submission_id,
+NA)
+) %>% 
+fill(first_seen_checklist, .direction = "down") %>% 
+fill(last_seen_checklist, .direction = "up") %>% 
+summarize(
+first_seen = min(date),
+last_seen = max(date),
+first_seen_checklist = unique(first_seen_checklist),
+last_seen_checklist = unique(last_seen_checklist),
+perc_checklists = (100 * (n() / max(n_checklists))) %>% round(1),
+n_checklists = n()
+) %>%
+mutate(
+perc_checklists = my_color_bar()(perc_checklists),
+first_seen = paste0("<a target='_blank' href='https://ebird.org/checklist/", first_seen_checklist,"'>", first_seen, "</a>"),
+last_seen = paste0("<a target='_blank' href='https://ebird.org/checklist/", last_seen_checklist,"'>", last_seen, "</a>")
+) %>% 
+select(-c(first_seen_checklist, last_seen_checklist)) %>% 
+arrange(desc(perc_checklists)) %>% 
+rename(
+"Species" = common_name,
+"First" = first_seen,
+"Last" = last_seen,
+"% Checklists" = perc_checklists,
+"N Checklists" = n_checklists
+)
+n_rows = nrow(data_preview_table)
+data_preview_table = 
+data_preview_table %>% 
+formattable() %>% 
+as.datatable(
+rownames = FALSE,
+options = list(
+processing = TRUE,
+serverSide = TRUE,
+dom = "fit",
+language = list(
+info = "Showing _START_ to _END_ of _TOTAL_ species.",
+zeroRecords = "No matching species found",
+infoFiltered = "(Filtered from _MAX_ total species.)"
+),
+scrollY = ((input$pltChange$height - 122)) - 148,
+pageLength = n_rows
+)
+)
+# something in the above changes N checklists to character; fix for sorting
+data_preview_table$x$data$`N Checklists` = as.numeric(data_preview_table$x$data$`N Checklists`)
+return(data_preview_table)
 })
 
 output$data_observations = DT::renderDT({
-  n_rows = nrow(selected_dat())
-  observations_table =
-    selected_dat() %>%
-    arrange(desc(date), desc(time)) %>%
-    select(date, time, count, common_name, location, submission_id, observation_details) %>%
-    #     mutate(
-    #       # can be used to display scrollable height, for trouble shooting
-    #       height = input$pltChange$height,
-    #       scrolly = paste0(0.65 * (input$pltChange$height - 95 - 80), "px")
-    # ) %>%
-    mutate(
-      count = ifelse(count == -1, "X", count),
-      observation_details = ifelse(is.na(observation_details), "", observation_details),
-      submission_id = paste0("<a target='_blank' href='https://ebird.org/checklist/", submission_id,"'>", submission_id, "</a>")
-    ) %>% 
-    rename(
-      "Date" = date,
-      "Time" = time,
-      "Count" = count,
-      "Common name" = common_name,
-      "Location" = location,
-      "Comments" = observation_details,
-      "Checklist ID" = submission_id
-    ) %>% 
-    mutate(Time = str_extract(Time, "^.{5}")) %>%
-    formattable() %>% 
-    as.datatable(
-      rownames = FALSE,
-      options = list(
-        processing = TRUE,
-        serverSide = TRUE,
-        language = list(
-          lengthMenu = "Show _MENU_ observations per page",
-          infoFiltered = "(Filtered from _MAX_ total observations.)",
-          processing = "Processing ...",
-          info = "Showing _START_ to _END_ of _TOTAL_ observations.",
-          zeroRecords = "No matching observations found"
-        ),
-        dom = "rlipt",
-        scrollY = ((input$pltChange$height - 122)) - 148,
-        lengthMenu = c(10, 50, 100, 500, 1000),
-        pageLength = 1000,
-        columnDefs = list(
-          list(width = '12%', targets = 0),
-          list(width = '4%', targets = 1),
-          list(width = '4%', targets = 2),
-          list(width = '20%', targets = 3),
-          list(width = '25%', targets = 4),
-          list(width = '8%', targets = 5),
-          list(width = '27%', targets = 6)
-        )
-      ),
-      filter = list(
-        position = 'top', clear = FALSE
-      )
-    )
-  # # something in the above changes N checklists to character; fix for sorting
-  # data_preview_table$x$data$`N checklists` = as.numeric(data_preview_table$x$data$`N checklists`)
-  return(observations_table)
+n_rows = nrow(selected_dat())
+observations_table =
+selected_dat() %>%
+arrange(desc(date), desc(time)) %>%
+select(date, time, count, common_name, location, submission_id, observation_details) %>%
+#     mutate(
+#       # can be used to display scrollable height, for trouble shooting
+#       height = input$pltChange$height,
+#       scrolly = paste0(0.65 * (input$pltChange$height - 95 - 80), "px")
+# ) %>%
+mutate(
+count = ifelse(count == -1, "X", count),
+observation_details = ifelse(is.na(observation_details), "", observation_details),
+submission_id = paste0("<a target='_blank' href='https://ebird.org/checklist/", submission_id,"'>", submission_id, "</a>")
+) %>% 
+rename(
+"Date" = date,
+"Time" = time,
+"Count" = count,
+"Common name" = common_name,
+"Location" = location,
+"Comments" = observation_details,
+"Checklist ID" = submission_id
+) %>% 
+mutate(Time = str_extract(Time, "^.{5}")) %>%
+formattable() %>% 
+as.datatable(
+rownames = FALSE,
+options = list(
+processing = TRUE,
+serverSide = TRUE,
+language = list(
+lengthMenu = "Show _MENU_ observations per page",
+infoFiltered = "(Filtered from _MAX_ total observations.)",
+processing = "Processing ...",
+info = "Showing _START_ to _END_ of _TOTAL_ observations.",
+zeroRecords = "No matching observations found"
+),
+dom = "rlipt",
+scrollY = ((input$pltChange$height - 122)) - 148,
+lengthMenu = c(10, 50, 100, 500, 1000),
+pageLength = 1000,
+columnDefs = list(
+list(width = '12%', targets = 0),
+list(width = '4%', targets = 1),
+list(width = '4%', targets = 2),
+list(width = '20%', targets = 3),
+list(width = '25%', targets = 4),
+list(width = '8%', targets = 5),
+list(width = '27%', targets = 6)
+)
+),
+filter = list(
+position = 'top', clear = FALSE
+)
+)
+# # something in the above changes N checklists to character; fix for sorting
+# data_preview_table$x$data$`N checklists` = as.numeric(data_preview_table$x$data$`N checklists`)
+return(observations_table)
 }, server = TRUE)
 
 output$year1_table = DT::renderDT({
-  table_dat = 
-    selected_dat()%>% 
-    filter(year == input$year_list_slider[1]) %>% 
-    group_by(common_name) %>% 
-    slice(1) %>% 
-    ungroup() %>% 
-    arrange(desc(date)) %>% 
-    mutate(date = substr(date, 6, length(date))) %>% 
-    select(common_name, date)
-  n_species = paste0(input$year_list_slider[1], ": ", nrow(table_dat), " species")
-  table_dat %>% 
-    rename(
-      !!n_species := common_name
-    ) %>% 
-    formattable() %>% 
-    as.datatable(
-      rownames = FALSE,
-      options = list(
-        dom = "ft",
-        scrollY = ((input$pltChange$height - 122) * .50) - 148,
-        pageLength = 10000
-      )
-    )
+table_dat = 
+selected_dat()%>% 
+filter(year == input$year_list_slider[1]) %>% 
+group_by(common_name) %>% 
+slice(1) %>% 
+ungroup() %>% 
+arrange(desc(date)) %>% 
+mutate(date = substr(date, 6, length(date))) %>% 
+select(common_name, date)
+n_species = paste0(input$year_list_slider[1], ": ", nrow(table_dat), " species")
+table_dat %>% 
+rename(
+!!n_species := common_name
+) %>% 
+formattable() %>% 
+as.datatable(
+rownames = FALSE,
+options = list(
+dom = "ft",
+scrollY = ((input$pltChange$height - 122) * .50) - 148,
+pageLength = 10000
+)
+)
 })
 
 output$year2_table = DT::renderDT({
-  table_dat = 
-    selected_dat() %>% 
-    filter(year == input$year_list_slider[2]) %>% 
-    group_by(common_name) %>%
-    arrange(date) %>% 
-    slice(1) %>% 
-    ungroup() %>% 
-    arrange(desc(date)) %>% 
-    mutate(date = substr(date, 6, length(date))) %>% 
-    select(common_name, date)
-  n_species = paste0(input$year_list_slider[2], ": ", nrow(table_dat), " species")
-  table_dat %>% 
-    rename(
-      !!n_species := common_name
-    ) %>% 
-    formattable() %>% 
-    as.datatable(
-      rownames = FALSE,
-      options = list(
-        dom = "ft",
-        scrollY = ((input$pltChange$height - 122) * .50) - 148,
-        pageLength = 10000
-      )
-    )
+table_dat = 
+selected_dat() %>% 
+filter(year == input$year_list_slider[2]) %>% 
+group_by(common_name) %>%
+arrange(date) %>% 
+slice(1) %>% 
+ungroup() %>% 
+arrange(desc(date)) %>% 
+mutate(date = substr(date, 6, length(date))) %>% 
+select(common_name, date)
+n_species = paste0(input$year_list_slider[2], ": ", nrow(table_dat), " species")
+table_dat %>% 
+rename(
+!!n_species := common_name
+) %>% 
+formattable() %>% 
+as.datatable(
+rownames = FALSE,
+options = list(
+dom = "ft",
+scrollY = ((input$pltChange$height - 122) * .50) - 148,
+pageLength = 10000
+)
+)
 })
 
 # currently not used
@@ -730,150 +737,150 @@ output$year2_table = DT::renderDT({
 # )
 
 output$large_hotspot_map = renderLeaflet({
-  leaflet() %>%
-    addTiles(
-      urlTemplate = "https://mts1.google.com/vt/lyrs=s&hl=en&src=app&x={x}&y={y}&z={z}&s=G",
-      attribution = "Google"
-    ) %>%
-    addMarkers(
-      lng = hotspot_longitude(), 
-      lat = hotspot_latitude(), 
-      popup = hotspot_name()
-      # lng = top_location_info$longitude, 
-      # lat = top_location_info$latitude, 
-      # popup = top_location_info$location
-    )
+leaflet() %>%
+addTiles(
+urlTemplate = "https://mts1.google.com/vt/lyrs=s&hl=en&src=app&x={x}&y={y}&z={z}&s=G",
+attribution = "Google"
+) %>%
+addMarkers(
+lng = hotspot_longitude(), 
+lat = hotspot_latitude(), 
+popup = hotspot_name()
+# lng = top_location_info$longitude, 
+# lat = top_location_info$latitude, 
+# popup = top_location_info$location
+)
 }
 )
 
 output$year_plot1 = renderPlot({
-  selected_dat() %>% 
-    year_list_ecdf(
-      year_from = input$year_list_slider[1], 
-      year_to = input$year_list_slider[2]
-    )
+selected_dat() %>% 
+year_list_ecdf(
+year_from = input$year_list_slider[1], 
+year_to = input$year_list_slider[2]
+)
 })
 
 observeEvent(c(earliest_year(), latest_year()), {
-  updateSliderInput(
-    session,
-    "year_list_slider",
-    min = earliest_year(),
-    max = latest_year(),
-    value = c(
-      ifelse(length(years()) > 1, years()[length(years()) - 1], max(years())),
-      latest_year())
-  )
+updateSliderInput(
+session,
+"year_list_slider",
+min = earliest_year(),
+max = latest_year(),
+value = c(
+ifelse(length(years()) > 1, years()[length(years()) - 1], max(years())),
+latest_year())
+)
 }
 )
 
 observeEvent(c(earliest_date(), latest_date()), {
-  testje(testje() + 1)
-  # reset sidebar date input if earliest or latest date of data changes
-  updateSliderInput(
-    session,
-    "date_range_slider",
-    min = earliest_date(),
-    max = latest_date(),
-    value = c(earliest_date(), latest_date()),
-    timeFormat = "%b %Y"
-  )
-  updateSelectInput(
-    session,
-    "years_year_from",
-    choices = years()
-  )
-  updateSelectInput(
-    session,
-    "years_year_to",
-    choices = years()
-  )
+testje(testje() + 1)
+# reset sidebar date input if earliest or latest date of data changes
+updateSliderInput(
+session,
+"date_range_slider",
+min = earliest_date(),
+max = latest_date(),
+value = c(earliest_date(), latest_date()),
+timeFormat = "%b %Y"
+)
+updateSelectInput(
+session,
+"years_year_from",
+choices = years()
+)
+updateSelectInput(
+session,
+"years_year_to",
+choices = years()
+)
 }
 )
 
 observeEvent(c(input$date_range_slider, input$ebird_dat, input$selected_dat), {
-  if (difftime(Sys.time(), change_slider()) > react_delay) {
-    change_daterange(Sys.time())
-    updateDateRangeInput(
-      session,
-      "date_range",
-      start = input$date_range_slider[[1]],
-      end = input$date_range_slider[[2]]
-    )
-  }
+if (difftime(Sys.time(), change_slider()) > react_delay) {
+change_daterange(Sys.time())
+updateDateRangeInput(
+session,
+"date_range",
+start = input$date_range_slider[[1]],
+end = input$date_range_slider[[2]]
+)
+}
 }
 )
 
 observeEvent(c(input$date_range, input$ebird_dat, input$selected_dat), {
-  if (difftime(Sys.time(), change_daterange()) > react_delay) {
-    change_slider(Sys.time())
-    updateSliderInput(
-      session,
-      "date_range_slider",
-      value = c(input$date_range[[1]],
-                input$date_range[[2]]),
-      timeFormat = "%b %Y"
-    )
-  }
+if (difftime(Sys.time(), change_daterange()) > react_delay) {
+change_slider(Sys.time())
+updateSliderInput(
+session,
+"date_range_slider",
+value = c(input$date_range[[1]],
+input$date_range[[2]]),
+timeFormat = "%b %Y"
+)
+}
 })
 
 observeEvent(
-  c(input$hotspot_sorting, input$upload),
-  { 
-    if (input$hotspot_sorting == "Alphabetic"){
-      hotspot_list = 
-        ebird_dat() %>% 
-        distinct(location) %>% 
-        arrange(location)
-      if (any(str_detect(hotspot_list$location, "^[0-9]"))){
-      }
-      # move hotspots whose name starts with a number to the bottom of the list
-      # these names tend to be very long
-      hotspot_list = 
-        bind_rows(
-          hotspot_list %>% 
-            filter(!str_detect(location, "^[0-9]")),
-          hotspot_list %>% 
-            filter(str_detect(location, "^[0-9]"))
-        )
-      hotspot_list = c("All", hotspot_list %>% pull())
-    } else
-    {
-      # arrange by Number of checklists reported
-      hotspot_list =
-        ebird_dat() %>%
-        distinct(location, submission_id) %>% 
-        count(location, sort = TRUE) %>%
-        pull(location)
-      hotspot_list = c("All", hotspot_list)
-    }
-    reactive_hotspot_values(hotspot_list)
-    earliest_date(min(ebird_dat()$date))
-    latest_date(max(ebird_dat()$date))
-    years(as.numeric(as.character(sort(unique(ebird_dat()$year)))))
-    updateSelectInput(
-      session,
-      "hotspot",
-      choices = reactive_hotspot_values(),
-      selected = NULL
-    )
-    updateSliderInput(
-      session,
-      "date_range_slider",
-      min = earliest_date(),
-      max = latest_date(),
-      value = c(earliest_date(), latest_date()),
-      timeFormat = "%b %Y"
-    )
-    updateDateRangeInput(
-      session,
-      "date_range",
-      start = earliest_date(),
-      end = latest_date(),
-      min = earliest_date(),
-      max = latest_date()
-    )
-  })
+c(input$hotspot_sorting, input$upload),
+{ 
+if (input$hotspot_sorting == "Alphabetic"){
+hotspot_list = 
+ebird_dat() %>% 
+distinct(location) %>% 
+arrange(location)
+if (any(str_detect(hotspot_list$location, "^[0-9]"))){
+}
+# move hotspots whose name starts with a number to the bottom of the list
+# these names tend to be very long
+hotspot_list = 
+bind_rows(
+hotspot_list %>% 
+filter(!str_detect(location, "^[0-9]")),
+hotspot_list %>% 
+filter(str_detect(location, "^[0-9]"))
+)
+hotspot_list = c("All", hotspot_list %>% pull())
+} else
+{
+# arrange by Number of checklists reported
+hotspot_list =
+ebird_dat() %>%
+distinct(location, submission_id) %>% 
+count(location, sort = TRUE) %>%
+pull(location)
+hotspot_list = c("All", hotspot_list)
+}
+reactive_hotspot_values(hotspot_list)
+earliest_date(min(ebird_dat()$date))
+latest_date(max(ebird_dat()$date))
+years(as.numeric(as.character(sort(unique(ebird_dat()$year)))))
+updateSelectInput(
+session,
+"hotspot",
+choices = reactive_hotspot_values(),
+selected = NULL
+)
+updateSliderInput(
+session,
+"date_range_slider",
+min = earliest_date(),
+max = latest_date(),
+value = c(earliest_date(), latest_date()),
+timeFormat = "%b %Y"
+)
+updateDateRangeInput(
+session,
+"date_range",
+start = earliest_date(),
+end = latest_date(),
+min = earliest_date(),
+max = latest_date()
+)
+})
 
 # for trouble shooting
 # output$testje = renderText({
