@@ -90,6 +90,8 @@ summer_color = "#FFD800"
 fall_color = "#FF9900"
 winter_color = "#56B3FA"
 
+options(shiny.maxRequestSize = 15 * 1024 ^ 2) # accept uploads upto 15 MB
+
 source("helper-functions.R", local = TRUE)
 ```
 
