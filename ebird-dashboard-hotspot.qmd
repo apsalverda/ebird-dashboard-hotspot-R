@@ -309,6 +309,15 @@ output$import_filename = renderText({
 })
 
 output$species_count_plot = renderGirafe({
+  is_ubuntu = function() {
+    os_info = Sys.info()
+    return(grepl("Ubuntu", os_info["version"], ignore.case = TRUE))
+  }
+  if(is_ubuntu()) {
+    dot_size = 1
+  } else {
+    dot_size= 1.5
+  }
   plot = 
     selected_dat() %>% 
     count(submission_id, location, date, us_season) %>% 
@@ -325,7 +334,7 @@ output$species_count_plot = renderGirafe({
     geom_point_interactive(
       #      position = ggbeeswarm::position_quasirandom(width = 1),
       shape = 16,
-      size = 1.5,
+      size = dot_size,
       aes(
         tooltip = my_label,
         data_id = submission_id,
