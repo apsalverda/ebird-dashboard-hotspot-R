@@ -325,6 +325,7 @@ output$species_count_plot = renderGirafe({
     geom_point_interactive(
       #      position = ggbeeswarm::position_quasirandom(width = 1),
       shape = 16,
+      size = 1.5,
       aes(
         tooltip = my_label,
         data_id = submission_id,
