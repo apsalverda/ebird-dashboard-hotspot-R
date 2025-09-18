@@ -6,6 +6,7 @@ format:
     output-file: index.html
     embed-resources: true
     self-contained: true
+    favicon: favicon.ico
     orientation: columns
     loading: "Loading eBird user dashboard ..."
     expandable: false
@@ -92,6 +93,10 @@ winter_color = "#56B3FA"
 
 options(shiny.maxRequestSize = 15 * 1024 ^ 2) # accept uploads upto 15 MB
 
+if (!file.exists("/var/log/ebird-dashboard-hotspot-R/sessions.log")) {
+  file.create("/var/log/ebird-dashboard-hotspot-R/sessions.log")
+}
+
 source("helper-functions.R", local = TRUE)
 ```
 
@@ -116,6 +121,7 @@ hotspot_latitude = reactiveVal(0)
 hotspot_longitude = reactiveVal(0)
 hotspot_name = reactiveVal("")
 years = reactiveVal(list(NULL))
+session_id <- reactive({session$token})
 
 ebird_dat = reactiveVal({
 read_ebird_data()
@@ -125,6 +131,20 @@ imported_dat = reactive({
 req(input$upload)
 imported_dat = read_ebird_data(input$upload$datapath)
 })
+
+observe({
+log_entry = paste(
+Sys.time(),
+"app_startup",
+"Session ID:", 
+session$token, 
+"IP:", 
+session$request$REMOTE_ADDR)
+write(
+log_entry, 
+file = "/var/log/ebird-dashboard-hotspot-R/sessions.log", 
+append = TRUE)
+}) %>% bindEvent(session$token, once = TRUE)
 
 observeEvent(input$upload, {
 # triggered in response to the user uploading a file
@@ -170,6 +190,17 @@ n_species(
 imported_dat %>% 
 distinct(common_name) %>%
 nrow())
+log_entry = paste(
+Sys.time(),
+"import_data",
+"Session ID:", 
+session$token, 
+"IP:", 
+session$request$REMOTE_ADDR)
+write(
+log_entry, 
+file = "/var/log/ebird-dashboard-hotspot-R/sessions.log", 
+append = TRUE)
 })
 
 selected_dat = reactive({
