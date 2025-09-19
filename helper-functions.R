@@ -115,7 +115,7 @@ my_color_bar = function(...){
 year_list_ecdf = function(my_data, year_from = 2025, year_to = 2025){
   first_letter_months = function(x) {
     month_num = as.numeric(format(x, "%m"))
-    first_letters = c("J", substr(month.abb, 1, 1))
+    first_letters = substr(month.abb, 1, 1)
     return(first_letters[month_num])
   }
   cum_counts = function(year_dat){
@@ -135,6 +135,7 @@ year_list_ecdf = function(my_data, year_from = 2025, year_to = 2025){
   my_dat_from = cum_counts(my_data |> filter(year == year_from))
   my_dat_to = cum_counts(my_data |> filter(year == year_to))
 
+  # add data point for last day of year
   if (!(month(max(my_dat_from$date)) == 12 & month(max(my_dat_from$date)) == 31)){
     my_dat_from = bind_rows(
       my_dat_from,
