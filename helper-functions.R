@@ -176,13 +176,13 @@ year_list_ecdf = function(my_data, year_from = 2025, year_to = 2025){
       date_breaks = "1 month",
       expand = expansion(mult = c(.005, .005))
     ) +
-    #    scale_y_continuous(expansion(mult = c(0, .05))) +
+    scale_y_continuous(expand = expansion(mult = c(.01, .05))) +
     labs(
       title = "Number of species reported",
       x = "",
       y = ""
     ) +
-    #  theme_gray(base_size = 14) +
+#    theme_gray(base_size = 14) +
     theme(
       text = element_text(size = 14),
       panel.background = element_blank(),
