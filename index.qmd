@@ -138,7 +138,9 @@ observe({
     "Session ID:", 
     session$token, 
     "IP:", 
-    session$request$REMOTE_ADDR)
+    session$request$HTTP_X_FORWARDED_FOR,
+    "IP:",
+    session$request$HTTP_X_REAL_IP)
   
   if (file.exists("/var/log/ebird-dashboard-hotspot-R/sessions.log")){
     write(
