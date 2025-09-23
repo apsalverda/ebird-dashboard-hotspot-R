@@ -394,12 +394,13 @@ output$species_count_plot = renderGirafe({
     ) +
     #    theme_gray(base_size = 14) +
     theme(
+      text = element_text(size = 14),
       panel.grid = element_blank(),
       panel.background = element_blank(),
       axis.title.y = element_text(margin = margin(t = 0, r = 15, b = 0, l = 0)),
       plot.subtitle = element_text(
         color = "#707070",
-        size = 10,
+        size = 12,
         margin = margin(t = 0, r = 0, b = 15, l = 0)
       )
     )
