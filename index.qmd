@@ -352,7 +352,7 @@ output$species_count_plot = renderGirafe({
     return(grepl("Ubuntu", os_info["version"], ignore.case = TRUE))
   }
   if(is_ubuntu()) {
-    dot_size = 1
+    dot_size = 1.3
   } else {
     dot_size = 1.5
   }
