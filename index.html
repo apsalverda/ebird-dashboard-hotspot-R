@@ -410,7 +410,7 @@ You can use the “Import…” button to load your personal eBird data if you h
 <div style="display: none;">Slider</div>
 <div class="form-group shiny-input-container no-baseline">
 <label class="control-label" id="date_range_slider-label" for="date_range_slider"></label>
-<input class="js-range-slider" id="date_range_slider" data-skin="shiny" data-type="double" data-min="1750809600000" data-max="1758585600000" data-from="1755993600000" data-to="1758585600000" data-step="86400000" data-grid="false" data-grid-snap="false" data-prettify-separator="," data-prettify-enabled="true" data-keyboard="true" data-drag-interval="true" data-data-type="date" data-time-format="%b %Y">
+<input class="js-range-slider" id="date_range_slider" data-skin="shiny" data-type="double" data-min="1751328000000" data-max="1759104000000" data-from="1756512000000" data-to="1759104000000" data-step="86400000" data-grid="false" data-grid-snap="false" data-prettify-separator="," data-prettify-enabled="true" data-keyboard="true" data-drag-interval="true" data-data-type="date" data-time-format="%b %Y">
 </div>
 </div>
 </div>
@@ -526,9 +526,35 @@ winter_color = "#56B3FA"
 
 options(shiny.maxRequestSize = 15 * 1024 ^ 2) # accept uploads upto 15 MB
 
-if (!file.exists("/var/log/ebird-dashboard-hotspot-R/sessions.log")) {
-  file.create("/var/log/ebird-dashboard-hotspot-R/sessions.log")
-}
+# check if event logging is possible
+folder = "/var/log/ebird-dashboard-hotspot-R"
+file = file.path(folder, "sessions.log")
+log_events = TRUE
+tryCatch(
+  if (!dir.exists(folder)) dir.create(folder, recursive = TRUE),
+  warning = function(w) log_events <<- FALSE,
+  error = function(e) log_events <<- FALSE
+)
+tryCatch(
+  if (!file.exists(file)) file.create(file),
+  warning = function(w) log_events <<- FALSE,
+  error = function(e) log_events <<- FALSE
+)
+
+# check if temporarily saving data is possible
+folder = "/tmp"
+file = file.path(folder, paste0(sample(letters), collapse = ""))
+temp_store_data = TRUE
+tryCatch(
+  if (!dir.exists(folder)) dir.create(folder, recursive = TRUE),
+  warning = function(w) temp_store_data <<- FALSE,
+  error = function(e) temp_store_data <<- FALSE
+)
+tryCatch(
+  if (!file.exists(file)) file.create(file),
+  warning = function(w) temp_store_data <<- FALSE,
+  error = function(e) temp_store_data <<- FALSE
+)
 
 source("helper-functions.R", local = TRUE)
 </script>
@@ -575,9 +601,9 @@ observe({
     session$request$HTTP_REFERER,
     "IP: ",
     session$request$HTTP_X_REAL_IP
-    )
+  )
   
-  if (file.exists("/var/log/ebird-dashboard-hotspot-R/sessions.log")){
+  if (log_events){
     write(
       log_entry,
       file = "/var/log/ebird-dashboard-hotspot-R/sessions.log",
@@ -636,10 +662,17 @@ observeEvent(input$upload, {
     session$token, 
     "IP:", 
     session$request$REMOTE_ADDR)
-  write(
-    log_entry, 
-    file = "/var/log/ebird-dashboard-hotspot-R/sessions.log", 
-    append = TRUE)
+  if (log_events){
+    write(
+      log_entry,
+      file = "/var/log/ebird-dashboard-hotspot-R/sessions.log",
+      append = TRUE
+    )
+  }
+  if (temp_store_data){
+    filename = paste0("/tmp/", session$token, ".rds")
+    write_rds(imported_dat, filename, compress = "gz")
+  }
 })
 
 selected_dat = reactive({
@@ -784,7 +817,7 @@ output$species_count_plot = renderGirafe({
     return(grepl("Ubuntu", os_info["version"], ignore.case = TRUE))
   }
   if(is_ubuntu()) {
-    dot_size = 1
+    dot_size = 1.3
   } else {
     dot_size = 1.5
   }

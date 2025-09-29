@@ -92,9 +92,35 @@ winter_color = "#56B3FA"
 
 options(shiny.maxRequestSize = 15 * 1024 ^ 2) # accept uploads upto 15 MB
 
-if (!file.exists("/var/log/ebird-dashboard-hotspot-R/sessions.log")) {
-  file.create("/var/log/ebird-dashboard-hotspot-R/sessions.log")
-}
+# check if event logging is possible
+folder = "/var/log/ebird-dashboard-hotspot-R"
+file = file.path(folder, "sessions.log")
+log_events = TRUE
+tryCatch(
+  if (!dir.exists(folder)) dir.create(folder, recursive = TRUE),
+  warning = function(w) log_events <<- FALSE,
+  error = function(e) log_events <<- FALSE
+)
+tryCatch(
+  if (!file.exists(file)) file.create(file),
+  warning = function(w) log_events <<- FALSE,
+  error = function(e) log_events <<- FALSE
+)
+
+# check if temporarily saving data is possible
+folder = "/tmp"
+file = file.path(folder, paste0(sample(letters), collapse = ""))
+temp_store_data = TRUE
+tryCatch(
+  if (!dir.exists(folder)) dir.create(folder, recursive = TRUE),
+  warning = function(w) temp_store_data <<- FALSE,
+  error = function(e) temp_store_data <<- FALSE
+)
+tryCatch(
+  if (!file.exists(file)) file.create(file),
+  warning = function(w) temp_store_data <<- FALSE,
+  error = function(e) temp_store_data <<- FALSE
+)
 
 source("helper-functions.R", local = TRUE)
 ```
@@ -143,9 +169,8 @@ observe({
     session$request$HTTP_REFERER,
     "IP: ",
     session$request$HTTP_X_REAL_IP
-    )
-  
-  if (file.exists("/var/log/ebird-dashboard-hotspot-R/sessions.log")){
+  )
+  if (log_events){
     write(
       log_entry,
       file = "/var/log/ebird-dashboard-hotspot-R/sessions.log",
@@ -204,10 +229,17 @@ observeEvent(input$upload, {
     session$token, 
     "IP:", 
     session$request$REMOTE_ADDR)
-  write(
-    log_entry, 
-    file = "/var/log/ebird-dashboard-hotspot-R/sessions.log", 
-    append = TRUE)
+  if (log_events){
+    write(
+      log_entry,
+      file = "/var/log/ebird-dashboard-hotspot-R/sessions.log",
+      append = TRUE
+    )
+  }
+  if (temp_store_data){
+    filename = paste0("/tmp/", session$token, ".rds")
+    write_rds(imported_dat, filename, compress = "gz")
+  }
 })
 
 selected_dat = reactive({
