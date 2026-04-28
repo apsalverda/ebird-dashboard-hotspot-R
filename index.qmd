@@ -52,6 +52,9 @@ if (TRUE == FALSE){
   library("leaflet")
   library("ggiraph")
   library("formattable")
+  library("DT")
+  library("janitor")
+  library("quarto")
 }
 
 required_packages =
@@ -65,7 +68,8 @@ required_packages =
     "ggiraph",
     "formattable",
     "DT",
-    "janitor"
+    "janitor",
+    "quarto"
   )
 missing_packages = required_packages[!sapply(required_packages, requireNamespace, quietly = TRUE)]
 if (length(missing_packages) > 0){
@@ -108,7 +112,7 @@ tryCatch(
 )
 
 # check if temporarily saving data is possible
-folder = "/tmp"
+folder = "/tmp/ebird-dashboard-hotspot-R"
 file = file.path(folder, paste0(sample(letters), collapse = ""))
 temp_store_data = TRUE
 tryCatch(
