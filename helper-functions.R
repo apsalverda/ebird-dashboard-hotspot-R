@@ -1,35 +1,36 @@
 # helper functions for ebird-dashbird-hotspot.qmd
 
 read_ebird_data = function(my_filename = "MyEBirdData.csv"){
-  read_csv(
-    my_filename,
-    col_types = cols(
-      `Submission ID` = col_character(),
-      `Common Name` = col_character(),
-      `Scientific Name` = col_character(),
-      `Taxonomic Order` = col_double(),
-      Count = col_character(), #!
-      `State/Province` = col_character(),
-      County = col_character(),
-      `Location ID` = col_character(),
-      Location = col_character(),
-      Latitude = col_double(),
-      Longitude = col_double(),
-      Date = col_date(format = ""),
-      Time = col_time(format = ""),
-      Protocol = col_character(),
-      `Duration (Min)` = col_double(),
-      `All Obs Reported` = col_double(),
-      `Distance Traveled (km)` = col_double(),
-      `Area Covered (ha)` = col_logical(),
-      `Number of Observers` = col_double(),
-      `Breeding Code` = col_character(),
-      `Observation Details` = col_character(),
-      `Checklist Comments` = col_character(),
-      `ML Catalog Numbers` = col_character()
-    ),
-    na = c("")
-  ) %>%
+  my_dat =
+    read_csv(
+      my_filename,
+      col_types = cols(
+        `Submission ID` = col_character(),
+        `Common Name` = col_character(),
+        `Scientific Name` = col_character(),
+        `Taxonomic Order` = col_double(),
+        Count = col_character(), #!
+        `State/Province` = col_character(),
+        County = col_character(),
+        `Location ID` = col_character(),
+        Location = col_character(),
+        Latitude = col_double(),
+        Longitude = col_double(),
+        Date = col_date(format = ""),
+        Time = col_time(format = ""),
+        Protocol = col_character(),
+        `Duration (Min)` = col_double(),
+        `All Obs Reported` = col_double(),
+        `Distance Traveled (km)` = col_double(),
+        `Area Covered (ha)` = col_logical(),
+        `Number of Observers` = col_double(),
+        `Breeding Code` = col_character(),
+        `Observation Details` = col_character(),
+        `Checklist Comments` = col_character(),
+        `ML Catalog Numbers` = col_character()
+      ),
+      na = c("")
+    ) %>%
     janitor::clean_names() %>%
     select(submission_id, date, everything()) %>%
     arrange(date, time) %>%
@@ -48,8 +49,12 @@ read_ebird_data = function(my_filename = "MyEBirdData.csv"){
       month = factor(month(date, label = TRUE)),
       # convert "X" to -1 so count can be stored as an integer
       count = as.numeric(ifelse(count == "X", "-1", count))
-    ) |>
+    ) %>%
+    separate(state_province, into = c("country", "state"), sep = "-", remove = FALSE) %>%
     filter(!str_detect(common_name, "sp\\."))
+  all_countries <<- c("All", sort(unique(my_dat$country)))
+  all_states <<- c("All", sort(unique(my_dat$state_province)))
+  return(my_dat)
 }
 
 ordinal_date_suffix = Vectorize(
@@ -182,7 +187,7 @@ year_list_ecdf = function(my_data, year_from = 2025, year_to = 2025){
       x = "",
       y = ""
     ) +
-#    theme_gray(base_size = 14) +
+    #    theme_gray(base_size = 14) +
     theme(
       text = element_text(size = 14),
       panel.background = element_blank(),
@@ -241,4 +246,29 @@ my_rects = function(my_plot){
       )
     )
   return(rect_tibble)
+}
+
+sort_locations = function(my_dat, sorting){
+  sorted_locations = c("")
+  if (sorting == "Number of checklists"){
+    sorted_locations =
+      my_dat |>
+      distinct(location, submission_id) |>
+      count(location, sort = TRUE) |>
+      arrange(desc(n), location) |>
+      pull(location)
+  }
+  if (sorting == "Alphabetic"){
+    sorted_locations =
+      my_dat |>
+      distinct(location) |>
+      arrange(location) |>
+      pull()
+    sorted_locations =
+      c(
+      sorted_locations[!str_detect(sorted_locations, "^[0-9]")],
+      sorted_locations[str_detect(sorted_locations, "^[0-9]")]
+      )
+  }
+  return(c("All", sorted_locations))
 }

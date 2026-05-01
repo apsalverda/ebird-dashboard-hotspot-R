@@ -36,7 +36,7 @@ server: shiny
 #| include: false
 # check if default data set can be located
 if (!file.exists("MyEBirdData.csv")){
-  stop("Cannot compile document. Missing required file \"MyEBirdData.csv\".\nPlease add this file with your personal eBird data to the folder from which you compile the document.")
+  stop("Cannot compile document. Missing required file \"MyEBirdData.csv\".\nPlease add this file with your personal eBird data to the folder from which you compile the dashboard")
 }
 
 if (TRUE == FALSE){
@@ -55,6 +55,7 @@ if (TRUE == FALSE){
   library("DT")
   library("janitor")
   library("quarto")
+  library("reactlog")
 }
 
 required_packages =
@@ -69,7 +70,8 @@ required_packages =
     "formattable",
     "DT",
     "janitor",
-    "quarto"
+    "quarto",
+    "reactlog"
   )
 missing_packages = required_packages[!sapply(required_packages, requireNamespace, quietly = TRUE)]
 if (length(missing_packages) > 0){
@@ -84,6 +86,9 @@ if (length(missing_packages) > 0){
 
 invisible(lapply(required_packages, library, character.only = TRUE))
 
+# reactlog_enable()
+# options(shiny.trace = TRUE)
+
 original_ebird_green = "#2F7742"
 ebird_green = "#70c687"
 ebird_yellow = "#FFD800"
@@ -93,6 +98,9 @@ spring_color = "#70c687"
 summer_color = "#FFD800"
 fall_color = "#FF9900"
 winter_color = "#56B3FA"
+
+all_countries = NULL
+all_states = NULL
 
 options(shiny.maxRequestSize = 15 * 1024 ^ 2) # accept uploads upto 15 MB
 
@@ -136,7 +144,6 @@ react_delay = 1
 
 change_slider = reactiveVal(Sys.time())
 change_daterange = reactiveVal(Sys.time())
-reactive_hotspot_values = reactiveVal(list(NULL))
 earliest_date = reactiveVal()
 latest_date = reactiveVal()
 earliest_year = reactiveVal()
@@ -151,6 +158,8 @@ hotspot_longitude = reactiveVal(0)
 hotspot_name = reactiveVal("")
 years = reactiveVal(list(NULL))
 session_id <- reactive({session$token})
+filters  <- reactiveValues(country = "All", state = "All", location = "All")
+previous <- reactiveValues(country = "All", state = "All", location = "All")
 
 ebird_dat = reactiveVal({
   read_ebird_data()
@@ -247,21 +256,25 @@ observeEvent(input$upload, {
 })
 
 selected_dat = reactive({
-  req(input$hotspot)
+  req(filters$country)
+  req(filters$state)
+  req(filters$location)
   req(input$observation_types)
-  if (input$hotspot == "All"){
-    # user has selected all hotspots
-    my_selected_dat = ebird_dat()
-  } else {
-    # user has selected a hotspot
-    my_selected_dat = 
-      ebird_dat() %>% 
-      filter(
-        location == input$hotspot
-      )
+  my_selected_dat = ebird_dat()
+  if (filters$country != "All"){
+    # user has selected a country
+    my_selected_dat =
+      my_selected_dat %>%
+      filter(country == filters$country)
   }
-  earliest_date(min(my_selected_dat$date))
-  latest_date(max(my_selected_dat$date))
+  if (filters$state != "All"){
+    # user has selected a state
+    my_selected_dat =
+      my_selected_dat %>%
+      filter(state_province == filters$state)
+  }
+  if (!identical(min(my_selected_dat$date), isolate(earliest_date()))) earliest_date(min(my_selected_dat$date))
+  if (!identical(max(my_selected_dat$date), isolate(latest_date()))) latest_date(max(my_selected_dat$date))
   years(as.numeric(as.character(sort(unique(my_selected_dat$year)))))
   observation_types = c(
     "Traveling" = "eBird - Traveling Count",
@@ -271,6 +284,23 @@ selected_dat = reactive({
   ebird_observation_types = 
     observation_types[input$observation_types] |>
     unname()
+  my_selected_dat_for_sorting =
+    my_selected_dat %>%
+    filter(
+      date >= input$date_range[1],
+      date <= input$date_range[2]
+    ) %>%
+    filter(protocol %in% ebird_observation_types)
+  if (filters$location!= "All")
+  {
+    # user has selected a hotspot
+    my_selected_dat = 
+      my_selected_dat %>% 
+      filter(
+        location == filters$location
+      )
+  }
+  #  req(input$date_range)
   my_selected_dat = 
     my_selected_dat %>%
     filter(
@@ -278,15 +308,25 @@ selected_dat = reactive({
       date <= input$date_range[2]
     ) %>%
     filter(protocol %in% ebird_observation_types)
-  
-  earliest_year(min(as.numeric(as.character(my_selected_dat$year))))
-  latest_year(max(as.numeric(as.character(my_selected_dat$year))))
+  updateSelectInput(
+    session,
+    "hotspot",
+    choices = sort_locations(my_selected_dat_for_sorting, isolate(input$hotspot_sorting)),
+    selected = isolate(input$hotspot)
+  )
+  # earliest_year(min(as.numeric(as.character(my_selected_dat$year))))
+  # latest_year(max(as.numeric(as.character(my_selected_dat$year))))
+  if (!identical(min(as.numeric(as.character(my_selected_dat$year))), isolate(earliest_year()))) earliest_year(min(as.numeric(as.character(my_selected_dat$year))))
+  if (!identical(max(as.numeric(as.character(my_selected_dat$year))), isolate(latest_year()))) latest_year(max(as.numeric(as.character(my_selected_dat$year))))
   top_lat_lng =
     my_selected_dat %>%
     distinct(location, latitude, longitude)
-  hotspot_latitude(top_lat_lng$latitude)
-  hotspot_longitude(top_lat_lng$longitude)
-  hotspot_name(top_lat_lng$location)
+  # hotspot_latitude(top_lat_lng$latitude)
+  # hotspot_longitude(top_lat_lng$longitude)
+  # hotspot_name(top_lat_lng$location)
+  if (!identical(top_lat_lng$latitude,  isolate(hotspot_latitude()))) hotspot_latitude(top_lat_lng$latitude)
+  if (!identical(top_lat_lng$longitude, isolate(hotspot_longitude()))) hotspot_longitude(top_lat_lng$longitude)
+  if (!identical(top_lat_lng$location,  isolate(hotspot_name()))) hotspot_name(top_lat_lng$location)
   return(my_selected_dat)
 })
 
@@ -339,22 +379,6 @@ total_observations = reactive({
 output$total_observations_text = renderText({
   total_observations() %>% format(big.mark = ",")
 })
-
-# currently not using
-# last_trip = reactive({
-#   max_date = max(selected_dat()$date)
-#   paste(
-#     month(max_date, label = TRUE),
-#     " ",
-#     mday(max_date),
-#     ", ",
-#     year(max_date)
-#   )
-# })
-# output$last_trip_text = renderText({
-#   last_trip()
-# }
-# )
 
 output$imported_data_statistics = renderText({
   ifelse(
@@ -844,7 +868,6 @@ observeEvent(c(earliest_year(), latest_year()), {
 )
 
 observeEvent(c(earliest_date(), latest_date()), {
-  testje(testje() + 1)
   # reset sidebar date input if earliest or latest date of data changes
   updateSliderInput(
     session,
@@ -869,13 +892,13 @@ observeEvent(c(earliest_date(), latest_date()), {
 
 observeEvent(c(input$date_range_slider, input$ebird_dat, input$selected_dat), {
   if (difftime(Sys.time(), change_slider()) > react_delay) {
-    change_daterange(Sys.time())
-    updateDateRangeInput(
-      session,
-      "date_range",
-      start = input$date_range_slider[[1]],
-      end = input$date_range_slider[[2]]
-    )
+    new_start <- input$date_range_slider[[1]]
+    new_end   <- input$date_range_slider[[2]]
+    if (!identical(new_start, isolate(input$date_range[[1]])) || 
+        !identical(new_end,   isolate(input$date_range[[2]]))) {
+      change_daterange(Sys.time())
+      updateDateRangeInput(session, "date_range", start = new_start, end = new_end)
+    }  
   }
 }
 )
@@ -893,46 +916,168 @@ observeEvent(c(input$date_range, input$ebird_dat, input$selected_dat), {
   }
 })
 
-observeEvent(
-  c(input$hotspot_sorting, input$upload),
-  { 
-    if (input$hotspot_sorting == "Alphabetic"){
-      hotspot_list = 
-        ebird_dat() %>% 
-        distinct(location) %>% 
-        arrange(location)
-      if (any(str_detect(hotspot_list$location, "^[0-9]"))){
-      }
-      # move hotspots whose name starts with a number to the bottom of the list
-      # these names tend to be very long
-      hotspot_list = 
-        bind_rows(
-          hotspot_list %>% 
-            filter(!str_detect(location, "^[0-9]")),
-          hotspot_list %>% 
-            filter(str_detect(location, "^[0-9]"))
+observe(
+  {
+    current_country = input$country
+    current_state = input$state
+    current_location = input$hotspot
+    
+    previous_country = isolate(previous$country)
+    previous_state = isolate(previous$state)
+    previous_location = isolate(previous$location)
+    
+    country_changed = !identical(current_country, previous_country)
+    state_changed = !identical(current_state, previous_state)
+    location_changed = !identical(current_location, previous_location)
+    
+    if (country_changed){
+      # user changed country
+      # -> if user selects a specific country, show only the state/province
+      #    and hotspot values associsted with that country
+      filters$country = current_country
+      filters$state = "All"
+      filters$location = "All"
+      filtered_dat = 
+        if(current_country == "All") isolate(ebird_dat()) else isolate(ebird_dat()) |> filter(country == current_country)
+      states = c("All", sort(unique(filtered_dat$state_province)))
+      locations = c("All", sort(unique(filtered_dat$location)))
+      updateSelectInput(
+        session, 
+        "state",
+        choices = states,    
+        selected = "All"
+      )
+      updateSelectInput(
+        session, 
+        "hotspot",
+        choices = sort_locations(filtered_dat, isolate(input$hotspot_sorting)),
+        selected = "All"
+      )
+      previous$country = current_country
+      previous$state = "All"
+      previous$location = "All"
+    } else if (state_changed){
+      # user changed state
+      # -> if user selects a specific state/province, change country filter and
+      #    hotspot filters to show only values associated with that state/province
+      if (current_state == "All"){
+        filters$state = "All"
+        filters$location = "All"
+        filtered_dat = 
+          if(current_country == "All") isolate(ebird_dat()) else isolate(ebird_dat()) |> filter(country == current_country)
+        updateSelectInput(
+          session,
+          "state",
+          choices = c("All", filtered_dat |> distinct(province_state) |> arrange(province_state) |> pull()),
+          select = "All"
         )
-      hotspot_list = c("All", hotspot_list %>% pull())
-    } else
-    {
-      # arrange by Number of checklists reported
-      hotspot_list =
-        ebird_dat() %>%
-        distinct(location, submission_id) %>% 
-        count(location, sort = TRUE) %>%
-        pull(location)
-      hotspot_list = c("All", hotspot_list)
+        updateSelectInput(
+          session,
+          "hotspot",
+          choices = sort_locations(filtered_dat, isolate(input$hotspot_sorting)),
+          selected = "All"
+        )
+        previous$state = "All"
+        previous$location = "All"
+      } else {
+        filtered_dat = isolate(ebird_dat()) |> filter(state_province == current_state)
+        parent_country = unique(filtered_dat$country)
+        filters$country = parent_country
+        filters$state = current_state
+        filters$location = "All"
+        updateSelectInput(
+          session, 
+          "country", 
+          selected = parent_country
+        )
+        updateSelectInput(
+          session,
+          "state",
+          choices = c("All", isolate(ebird_dat()) |> filter(country == parent_country) |> distinct(state_province) |> arrange(state_province) |> pull()),
+          selected = current_state
+        )
+        updateSelectInput(
+          session, 
+          "hotspot",
+          choices = sort_locations(filtered_dat, isolate(input$hotspot_sorting)),  
+          selected = "All"
+        )
+        previous$country = parent_country
+        previous$state = current_state
+        previous$location = "All"
+      }
+    } else if (location_changed){
+      if (is.null(current_location) || current_location == "") 
+      {
+        previous$location = ""
+        return()
+      }
+      filters$location = current_location
+      previous$location = current_location
+      filtered_dat = isolate(ebird_dat())
+      if (filters$country != "All") filtered_dat = filtered_dat |> filter(country == filters$country)
+      if (filters$state != "All") filtered_dat = filtered_dat |> filter(state_province == filters$state)
+      updateSelectInput(
+        session,
+        "hotspot",
+        choices = sort_locations(filtered_dat, isolate(input$hotspot_sorting)),
+        selected = current_location
+      )
     }
-    reactive_hotspot_values(hotspot_list)
+  }
+)
+
+observeEvent(
+  input$hotspot_sorting,
+  {
+    updateSelectInput(
+      session, 
+      "hotspot",
+      choices = sort_locations(isolate(selected_dat()), isolate(input$hotspot_sorting)),  
+      selected = isolate(input$hotspot)
+    )
+  }
+)
+
+observeEvent(
+  # runs on initialization, or when new data is imported
+  c(session$clientData$url_hostname, input$upload),
+  { 
+    country_list =
+      ebird_dat() %>%
+      distinct(country) %>%
+      pull() |> 
+      sort()
+    country_list = c("All", country_list)
+    updateSelectInput(
+      session, 
+      "country",
+      choices = country_list,  
+      selected = "All"
+    )
+    #    reactive_country_values(country_list)
+    state_list =
+      ebird_dat() |> 
+      distinct(state_province) |> 
+      pull() |> 
+      sort()
+    state_list = c("All", state_list)
+    updateSelectInput(
+      session, 
+      "state",
+      choices = state_list,  
+      selected = "All"
+    )
+    #    reactive_state_values(state_list)
+    updateSelectInput(
+      session, 
+      "hotspot",
+      choices = sort_locations(ebird_dat(), isolate(input$hotspot_sorting)),  
+      selected = "All"
+    )
     earliest_date(min(ebird_dat()$date))
     latest_date(max(ebird_dat()$date))
     years(as.numeric(as.character(sort(unique(ebird_dat()$year)))))
-    updateSelectInput(
-      session,
-      "hotspot",
-      choices = reactive_hotspot_values(),
-      selected = NULL
-    )
     updateSliderInput(
       session,
       "date_range_slider",
@@ -950,6 +1095,7 @@ observeEvent(
       max = latest_date()
     )
   })
+#, ignoreInit = FALSE, once = TRUE)
 
 # for trouble shooting
 # output$testje = renderText({
@@ -985,8 +1131,20 @@ checkboxGroupInput(
   "Observation type",
   choices = c("Traveling", "Stationary", "Casual"),
   selected = c("Traveling")
-  # choices = c("Traveling Count", "Stationary Count", "Casual Observation"),
-  # selected = c("Traveling Count")
+)
+
+selectInput(
+  "country",
+  "Country",
+  choices = all_countries,
+  selected = "All"
+)
+
+selectInput(
+  "state",
+  "State or Province",
+  choices = all_states,
+  selected = "All"
 )
 
 selectInput(
@@ -994,20 +1152,6 @@ selectInput(
   "Hotspot",
   choices = NULL,
   selected = NULL
-)
-
-selectInput(
-  "hotspot_sorting", 
-  "Hotspot list sorting",
-  choices = list("Alphabetic", "Number of checklists"),
-  selected = "Number of checklists"
-)
-
-selectInput(
-  "season_coloring", 
-  "Season colors",
-  choices = list("Northern hemisphere", "Southern hemisphere", "None"),
-  selected = "Northern hemisphere"
 )
 
 # div(
@@ -1071,7 +1215,7 @@ tags$div(
     "upload",
     "",
     #    "2. Import your eBird data",
-    accept = ".csv",
+    accept = "",
     buttonLabel = "Import data",
     multiple = FALSE,
     placeholder = "",
@@ -1089,6 +1233,22 @@ tags$div(
     label = "Download your eBird data", 
     onclick = "window.open('https://ebird.org/downloadMyData', '_blank')"
   )
+)
+
+hr()
+
+selectInput(
+  "hotspot_sorting", 
+  "Hotspot sorting",
+  choices = list("Alphabetic", "Number of checklists"),
+  selected = "Number of checklists"
+)
+
+selectInput(
+  "season_coloring", 
+  "Season colors",
+  choices = list("Northern hemisphere", "Southern hemisphere", "None"),
+  selected = "Northern hemisphere"
 )
 
 #hr()
