@@ -574,7 +574,6 @@ output$species_count_plot = renderGirafe({
       linewidth = 3,
       inherit.aes = FALSE
     )
-  
   # avoid fractions on the Y axis
   # y_axis_breaks = layer_scales(plot)$y$break_positions()
   # y_axis_breaks = y_axis_breaks[!is.na(y_axis_breaks)]
@@ -585,19 +584,19 @@ output$species_count_plot = renderGirafe({
   #     scale_y_continuous(breaks = y_axis_breaks)
   # }
   girafe(
-    ggobj = plot, 
+    ggobj = plot,
     pointsize = 60,
     width_svg = (0.98 * (input$pltChange$width - 300) / input$pltChange$dpi),
     height_svg = (0.88 * (input$pltChange$height - 95 - 80) / input$pltChange$dpi)
     # width_svg = (0.98 * (input$pltChange$width - 300) / input$pltChange$dpi),
     # height_svg = (0.75 * (input$pltChange$height - 100) / input$pltChange$dpi)
-  ) %>% 
+  ) %>%
     girafe_options(
       opts_sizing(rescale = FALSE),
       opts_toolbar(
         fixed = TRUE,
         pngname = "ebird-dashboard.png",
-        hidden = c("selection", "saveaspng")
+        hidden = c("selection", "saveaspng", "zoom", "fullscreen")
       ),
       opts_tooltip(
         use_fill = TRUE,
