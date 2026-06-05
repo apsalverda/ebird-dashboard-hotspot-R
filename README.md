@@ -4,6 +4,7 @@ This dashboard, written in Quarto/R/Shiny, allows a user to upload and explore t
 
 **Recent updates**
 
+05/01/26: Added state/province filter
 09/10/25: Added observation type filter; added median checklist count for each season to Checklists visualization
 
 **IMPORTANT**: Requires your personal eBird data in a file named `MyEBirdData.csv`. Download your data [here](https://ebird.org/downloadMyData).
