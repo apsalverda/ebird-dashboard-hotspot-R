@@ -1,6 +1,6 @@
 This dashboard, written in Quarto/R/Shiny, allows a user to upload and explore their personal eBird data.
 
-A deployed version of the dashboard can be accessed [here](https://ebird.annepier.com).
+🆕 A deployed version of the dashboard can be accessed [here](https://ebird.annepier.com).
 
 **Recent updates**
 
